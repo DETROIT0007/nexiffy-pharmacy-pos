@@ -1,0 +1,7 @@
+bin/
+obj/
+*.user
+.vs/
+server.log
+server.err
+appsettings.Development.json
