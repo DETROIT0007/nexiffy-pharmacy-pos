@@ -297,6 +297,11 @@
     /* ── Chart / Status blocks ───────────────────── */
     .chart-empty{text-align:center;color:var(--gray-400);padding:24px;font-size:.83rem}
 
+    /* ── Offline / Sync ──────────────────────────── */
+    #offlinePill{display:none;background:var(--danger-light);color:var(--danger);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:700;border:1.5px solid #fca5a5}
+    #syncPendingBtn{display:none;background:var(--warning-light);color:var(--warning);border:1.5px solid #fde68a;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;cursor:pointer;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
     @media(max-width:768px){
       .sidebar{position:fixed;top:0;left:0;height:100vh;transform:translateX(-100%)}
       .sidebar.open{transform:translateX(0)}
@@ -357,6 +362,8 @@
       <button class="hamburger" onclick="toggleSidebar()">☰</button>
       <h2 id="pageTitle">Dashboard</h2>
       <div class="topbar-right">
+        <span id="offlinePill">⚡ Offline</span>
+        <button id="syncPendingBtn" title="Sync queued bills to server">↑ Sync (<span id="syncCount">0</span>)</button>
         <div class="user-pill"><div class="user-ava" id="userInitial">A</div><span id="userBadge">admin</span></div>
         <button class="btn btn-ghost" id="changePassBtn" style="padding:5px 11px;font-size:.78rem">🔑 Password</button>
         <button class="btn-logout" onclick="logout()">Logout</button>
@@ -577,6 +584,39 @@ let medPage = 1, medTotal = 0;
 let billPage = 1, billTotal = 0;
 const PAGE_SIZE = 20;
 let dashPeriod = 'today';
+
+// ── IndexedDB helpers ─────────────────────────────
+const IDB_NAME = 'nexffy_offline', IDB_VER = 1;
+let _idb = null;
+
+function openIdb() {
+  if (_idb) return Promise.resolve(_idb);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('medicines'))
+        db.createObjectStore('medicines', { keyPath: 'code' });
+      if (!db.objectStoreNames.contains('pendingBills'))
+        db.createObjectStore('pendingBills', { keyPath: 'localId' });
+    };
+    req.onsuccess  = e => { _idb = e.target.result; res(_idb); };
+    req.onerror    = () => rej(req.error);
+  });
+}
+const idbTx = (store, mode, fn) =>
+  openIdb().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(store, mode);
+    const os = tx.objectStore(store);
+    const req = fn(os);
+    if (req) { req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); }
+    else { tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }
+  }));
+const idbGet    = (s, k)  => idbTx(s, 'readonly',  os => os.get(k));
+const idbGetAll = s       => idbTx(s, 'readonly',  os => os.getAll());
+const idbPut    = (s, v)  => idbTx(s, 'readwrite', os => os.put(v));
+const idbDel    = (s, k)  => idbTx(s, 'readwrite', os => os.delete(k));
+const idbPutAll = (s, vs) => idbTx(s, 'readwrite', os => { vs.forEach(v => os.put(v)); return null; });
 
 // ── Security: escape HTML ─────────────────────────
 function h(s) {
@@ -918,7 +958,16 @@ async function loadPosMedicines() {
       const res = await apiFetch('/Medicines?pageSize=500');
       const d = await res.json();
       allMedicines = d.items;
-    } catch { return; }
+      idbPutAll('medicines', allMedicines).catch(() => {});
+    } catch (e) {
+      if (e.message === 'Session expired. Please login again.') return;
+      // Fall back to IndexedDB cache when server is unreachable
+      const cached = await idbGetAll('medicines').catch(() => []);
+      if (cached.length) {
+        allMedicines = cached;
+        showToast('Offline — using cached medicines', false, false);
+      } else { return; }
+    }
   }
   const cats = [...new Set(allMedicines.map(m => m.category))].sort();
   const cf = document.getElementById('posCatFilter');
@@ -1124,12 +1173,64 @@ async function saveBill() {
       showToast(data.message || 'Failed to save bill', true);
     }
   } catch (e) {
-    if (e.message !== 'Session expired. Please login again.')
-      showToast('Network error — check server', true);
+    if (e.message === 'Session expired. Please login again.') return;
+    // Queue the bill locally and sync when server is available
+    const localId = 'LOCAL-' + Date.now();
+    await idbPut('pendingBills', { ...bill, localId, queuedAt: new Date().toISOString() })
+      .then(() => {
+        showToast(`Offline — bill queued (will sync automatically)`, false, false);
+        clearCart();
+        updateSyncBadge();
+      })
+      .catch(() => showToast('Network error — check server', true));
   } finally {
     btn.disabled = false; btn.textContent = 'Save Bill';
   }
 }
+
+// ── Offline / Sync ────────────────────────────────
+async function updateSyncBadge() {
+  const pending = await idbGetAll('pendingBills').catch(() => []);
+  const count = pending.length;
+  const btn = document.getElementById('syncPendingBtn');
+  const lbl = document.getElementById('syncCount');
+  if (count > 0) { lbl.textContent = count; btn.style.display = ''; }
+  else { btn.style.display = 'none'; }
+}
+
+async function syncPendingBills() {
+  const pending = await idbGetAll('pendingBills').catch(() => []);
+  if (!pending.length) return;
+  let synced = 0, failed = 0;
+  for (const bill of pending) {
+    const { localId, queuedAt, ...serverBill } = bill;
+    try {
+      const res = await apiFetch('/Bills', { method: 'POST', body: JSON.stringify(serverBill) });
+      if (res.ok) {
+        await idbDel('pendingBills', localId);
+        synced++;
+        allMedicines = [];
+      } else { failed++; }
+    } catch { failed++; break; }  // server still unreachable — stop trying
+  }
+  updateSyncBadge();
+  if (synced > 0) {
+    showToast(`Synced ${synced} offline bill${synced > 1 ? 's' : ''}`, false, true);
+    loadPosMedicines();
+    if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
+  }
+  if (failed > 0) showToast(`${failed} bill(s) failed to sync — will retry`, true);
+}
+
+window.addEventListener('online',  () => {
+  document.getElementById('offlinePill').style.display = 'none';
+  syncPendingBills();
+});
+window.addEventListener('offline', () => {
+  document.getElementById('offlinePill').style.display = '';
+});
+
+document.getElementById('syncPendingBtn').addEventListener('click', syncPendingBills);
 
 // ── Cart persistence ───────────────────────────────
 function saveCart() { localStorage.setItem('nexffy_cart', JSON.stringify(cart)); }
@@ -1613,9 +1714,16 @@ function initApp() {
   renderCart();
   loadDashboard();
   loadCategories();
+  updateSyncBadge();
+  if (!navigator.onLine) document.getElementById('offlinePill').style.display = '';
 }
 
-// Boot: check for existing session via HttpOnly cookie
+// ── Service Worker registration ────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ── Boot: check for existing session via HttpOnly cookie ──
 document.getElementById('loginPass').addEventListener('keydown', e => {
   if (e.key === 'Enter') login();
 });
