@@ -12,6 +12,7 @@ namespace Nexffy.Data
         public DbSet<BillItem> BillItems { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<AppSetting> AppSettings { get; set; }
+        public DbSet<RevokedToken> RevokedTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -31,6 +32,9 @@ namespace Nexffy.Data
             modelBuilder.Entity<BillItem>()
                 .HasIndex(i => i.MedicineCode)
                 .HasDatabaseName("IX_BillItems_MedicineCode");
+            modelBuilder.Entity<RevokedToken>()
+                .HasIndex(t => t.ExpiresAt)
+                .HasDatabaseName("IX_RevokedTokens_ExpiresAt");
 
             modelBuilder.Entity<Medicine>().HasData(
                 new Medicine { Code = "MED-001", Name = "Panadol 500mg",     GenericName = "Paracetamol",              Category = "Painkiller",     Unit = "Strip",  Price = 85.00m,  Stock = 500,  ExpiryDate = "2027-06-30", Manufacturer = "GSK"       },

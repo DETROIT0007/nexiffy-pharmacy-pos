@@ -22,6 +22,12 @@ namespace Nexffy.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly AppDbContext _context;
 
+        // Lock the account for 15 minutes after 10 consecutive failures
+        private const int MaxFailedAttempts = 10;
+        private const int LockoutMinutes    = 15;
+        private const string FailKey  = "Auth:FailedAttempts";
+        private const string LockKey  = "Auth:LockedUntil";
+
         public AuthController(
             IConfiguration config,
             IPasswordHasher<string> hasher,
@@ -29,14 +35,15 @@ namespace Nexffy.Controllers
             IWebHostEnvironment env,
             AppDbContext context)
         {
-            _config = config;
-            _hasher = hasher;
-            _logger = logger;
-            _env = env;
+            _config  = config;
+            _hasher  = hasher;
+            _logger  = logger;
+            _env     = env;
             _context = context;
         }
 
-        // Resolve the active password hash: DB override > config hash > plaintext fallback
+        // ── Helpers ──────────────────────────────────────────────
+
         private async Task<string?> GetStoredHashAsync()
         {
             var dbHash = (await _context.AppSettings.FindAsync("Auth:PasswordHash"))?.Value;
@@ -44,6 +51,54 @@ namespace Nexffy.Controllers
             var cfgHash = _config["Auth:PasswordHash"];
             return !string.IsNullOrWhiteSpace(cfgHash) ? cfgHash : null;
         }
+
+        private async Task<(bool locked, DateTime until)> CheckLockoutAsync()
+        {
+            var setting = await _context.AppSettings.FindAsync(LockKey);
+            if (setting == null) return (false, default);
+            if (DateTime.TryParse(setting.Value, null,
+                System.Globalization.DateTimeStyles.RoundtripKind, out var until)
+                && DateTime.UtcNow < until)
+                return (true, until);
+            return (false, default);
+        }
+
+        private async Task RecordFailedAttemptAsync()
+        {
+            var fail = await _context.AppSettings.FindAsync(FailKey);
+            var count = fail != null && int.TryParse(fail.Value, out var c) ? c + 1 : 1;
+
+            if (fail == null)
+                _context.AppSettings.Add(new AppSetting { Key = FailKey, Value = count.ToString(), UpdatedAt = DateTime.UtcNow });
+            else
+            { fail.Value = count.ToString(); fail.UpdatedAt = DateTime.UtcNow; }
+
+            if (count >= MaxFailedAttempts)
+            {
+                var until = DateTime.UtcNow.AddMinutes(LockoutMinutes);
+                var lockSetting = await _context.AppSettings.FindAsync(LockKey);
+                if (lockSetting == null)
+                    _context.AppSettings.Add(new AppSetting { Key = LockKey, Value = until.ToString("O"), UpdatedAt = DateTime.UtcNow });
+                else
+                { lockSetting.Value = until.ToString("O"); lockSetting.UpdatedAt = DateTime.UtcNow; }
+
+                _logger.LogWarning("Account locked until {Until} after {Count} failed attempts from {IP}",
+                    until, count, HttpContext.Connection.RemoteIpAddress);
+            }
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task ResetLockoutAsync()
+        {
+            var fail = await _context.AppSettings.FindAsync(FailKey);
+            var lockSetting = await _context.AppSettings.FindAsync(LockKey);
+            if (fail != null) _context.AppSettings.Remove(fail);
+            if (lockSetting != null) _context.AppSettings.Remove(lockSetting);
+            if (fail != null || lockSetting != null)
+                await _context.SaveChangesAsync();
+        }
+
+        // ── Endpoints ─────────────────────────────────────────────
 
         [HttpPost("login")]
         [AllowAnonymous]
@@ -53,9 +108,20 @@ namespace Nexffy.Controllers
             if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
                 return BadRequest(new { message = "Username and password required" });
 
+            // Account lockout check
+            var (locked, until) = await CheckLockoutAsync();
+            if (locked)
+            {
+                var remaining = (int)Math.Ceiling((until - DateTime.UtcNow).TotalMinutes);
+                _logger.LogWarning("Login blocked — account locked for {Min} more minute(s) (IP {IP})",
+                    remaining, HttpContext.Connection.RemoteIpAddress);
+                return StatusCode(429, new { message = $"Account locked. Try again in {remaining} minute(s)." });
+            }
+
             var validUser = _config["Auth:Username"];
             if (request.Username != validUser)
             {
+                await RecordFailedAttemptAsync();
                 _logger.LogWarning("Failed login for unknown user '{User}' from {IP}",
                     request.Username, HttpContext.Connection.RemoteIpAddress);
                 return Unauthorized(new { message = "Invalid credentials" });
@@ -71,35 +137,43 @@ namespace Nexffy.Controllers
             }
             else
             {
-                // Plaintext fallback — migration path; startup logs the hash once
                 passwordValid = request.Password == _config["Auth:Password"];
             }
 
             if (!passwordValid)
             {
+                await RecordFailedAttemptAsync();
                 _logger.LogWarning("Failed login for user '{User}' from {IP}",
                     request.Username, HttpContext.Connection.RemoteIpAddress);
                 return Unauthorized(new { message = "Invalid credentials" });
             }
 
-            var secret = _config["Auth:JwtSecret"]!;
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+            // Successful login — reset lockout counter
+            await ResetLockoutAsync();
+
+            // Issue JWT with a unique JTI so individual tokens can be revoked at logout
+            var jwtSecret = GetJwtSecretFromFile();
+            var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
                 issuer: "nexffy-pharmacy",
                 audience: "nexffy-pos",
-                claims: new[] { new Claim(ClaimTypes.Name, request.Username) },
+                claims: new[]
+                {
+                    new Claim(ClaimTypes.Name, request.Username),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
+                },
                 expires: DateTime.UtcNow.AddHours(2),
                 signingCredentials: creds);
 
             Response.Cookies.Append("nexffy_auth", new JwtSecurityTokenHandler().WriteToken(token),
                 new CookieOptions
                 {
-                    HttpOnly = true,
-                    SameSite = SameSiteMode.Strict,
-                    Secure = !_env.IsDevelopment(),
-                    MaxAge = TimeSpan.FromHours(2),
-                    Path = "/"
+                    HttpOnly  = true,
+                    SameSite  = SameSiteMode.Strict,
+                    Secure    = !_env.IsDevelopment(),
+                    MaxAge    = TimeSpan.FromHours(2),
+                    Path      = "/"
                 });
 
             _logger.LogInformation("User '{User}' logged in from {IP}",
@@ -110,8 +184,29 @@ namespace Nexffy.Controllers
 
         [HttpPost("logout")]
         [AllowAnonymous]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
+            // Blacklist the JWT so it can't be replayed before it naturally expires
+            var raw = Request.Cookies["nexffy_auth"];
+            if (raw != null)
+            {
+                try
+                {
+                    var handler = new JwtSecurityTokenHandler();
+                    if (handler.CanReadToken(raw))
+                    {
+                        var jwt = handler.ReadJwtToken(raw);
+                        var jti = jwt.Id;
+                        if (!string.IsNullOrEmpty(jti) && jwt.ValidTo > DateTime.UtcNow)
+                        {
+                            if (!await _context.RevokedTokens.AnyAsync(t => t.Jti == jti))
+                                _context.RevokedTokens.Add(new RevokedToken { Jti = jti, ExpiresAt = jwt.ValidTo });
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+                catch { /* malformed token — just clear the cookie */ }
+            }
             Response.Cookies.Delete("nexffy_auth", new CookieOptions { Path = "/" });
             return Ok();
         }
@@ -149,16 +244,22 @@ namespace Nexffy.Controllers
             var newHash = _hasher.HashPassword("", req.NewPassword);
             var setting = await _context.AppSettings.FindAsync("Auth:PasswordHash");
             if (setting == null)
-                _context.AppSettings.Add(new AppSetting { Key = "Auth:PasswordHash", Value = newHash, UpdatedAt = DateTime.Now });
+                _context.AppSettings.Add(new AppSetting { Key = "Auth:PasswordHash", Value = newHash, UpdatedAt = DateTime.UtcNow });
             else
-            {
-                setting.Value = newHash;
-                setting.UpdatedAt = DateTime.Now;
-            }
-            await _context.SaveChangesAsync();
+            { setting.Value = newHash; setting.UpdatedAt = DateTime.UtcNow; }
 
+            await _context.SaveChangesAsync();
             _logger.LogInformation("Password changed by {User}", User.Identity?.Name);
             return Ok(new { message = "Password changed successfully" });
+        }
+
+        // Read the JWT secret from the same OS file Program.cs created
+        private static string GetJwtSecretFromFile()
+        {
+            var keyPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "Nexffy", "jwt.key");
+            return File.ReadAllText(keyPath).Trim();
         }
     }
 }
