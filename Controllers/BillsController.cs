@@ -1,0 +1,204 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Nexffy.Data;
+using Nexffy.Models;
+using System.Data;
+
+namespace Nexffy.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class BillsController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+        private readonly ILogger<BillsController> _logger;
+
+        public BillsController(AppDbContext context, ILogger<BillsController> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll(
+            [FromQuery] string? date,
+            [FromQuery] string? patient,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            if (page < 1) page = 1;
+            if (page > 100000) page = 100000;
+            if (pageSize < 1 || pageSize > 100) pageSize = 20;
+
+            var query = _context.Bills.Include(b => b.Items).AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(date))
+                query = query.Where(b => b.Date == date);
+
+            if (!string.IsNullOrWhiteSpace(patient))
+                query = query.Where(b =>
+                    b.PatientName.Contains(patient) ||
+                    b.PatientCode.Contains(patient));
+
+            var total = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(b => b.Date)
+                .ThenByDescending(b => b.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return Ok(new { items, total, page, pageSize });
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Bill>> GetOne(string id)
+        {
+            var bill = await _context.Bills.Include(b => b.Items)
+                .FirstOrDefaultAsync(b => b.Id == id);
+            return bill == null ? NotFound() : Ok(bill);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] Bill bill)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (bill.Items == null || bill.Items.Count == 0)
+                return BadRequest(new { message = "Bill must have at least one item" });
+
+            // Validate all item rates are positive
+            foreach (var item in bill.Items)
+            {
+                if (item.Rate <= 0)
+                    return BadRequest(new { message = $"Invalid rate for {item.MedicineName}" });
+                if (item.Qty < 1 || item.Qty != Math.Floor(item.Qty))
+                    return BadRequest(new { message = $"Quantity for {item.MedicineName} must be a positive whole number" });
+            }
+
+            await using var transaction = await _context.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable);
+            try
+            {
+                // Sequential bill ID — SERIALIZABLE lock prevents concurrent duplicates
+                var lastId = await _context.Bills
+                    .OrderByDescending(b => b.Id)
+                    .Select(b => b.Id)
+                    .FirstOrDefaultAsync();
+
+                int seq = 1;
+                if (lastId != null)
+                {
+                    if (lastId.StartsWith("BILL-") && int.TryParse(lastId[5..], out int parsed))
+                        seq = parsed + 1;
+                    else
+                        _logger.LogError("Non-standard bill ID '{LastId}' found — ID sequence may be corrupted", lastId);
+                }
+
+                bill.Id = $"BILL-{seq:D8}";
+                bill.Date = DateTime.Now.ToString("yyyy-MM-dd");
+                bill.Status = BillStatus.Saved;
+
+                var subtotal = bill.Items.Sum(i => i.Amount);
+                if (bill.Discount < 0 || bill.Discount > subtotal)
+                    return BadRequest(new { message = "Discount cannot exceed subtotal" });
+
+                bill.TotalAmount = subtotal - bill.Discount;
+
+                foreach (var item in bill.Items)
+                {
+                    var med = await _context.Medicines
+                        .FirstOrDefaultAsync(m => m.Code == item.MedicineCode);
+
+                    if (med == null)
+                        return BadRequest(new { message = $"Medicine '{item.MedicineCode}' not found" });
+
+                    var deduct = (int)item.Qty;
+                    if (med.Stock < deduct)
+                        return BadRequest(new { message = $"Insufficient stock for {med.Name}. Available: {med.Stock}" });
+
+                    med.Stock -= deduct;
+                    med.LastUpdated = DateTime.Now;
+                }
+
+                _context.Bills.Add(bill);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Bill {BillId} created by {User} — {Items} items, total PKR {Total}",
+                    bill.Id, User.Identity?.Name, bill.Items.Count, bill.TotalAmount);
+
+                return Ok(new { message = "Bill saved", id = bill.Id, totalAmount = bill.TotalAmount });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                var cid = HttpContext.TraceIdentifier;
+                _logger.LogError(ex, "[{CorrelationId}] Failed to create bill for user {User}", cid, User.Identity?.Name);
+                return StatusCode(500, new { message = "Failed to save bill. Please try again.", correlationId = cid });
+            }
+        }
+
+        [HttpPut("{id}/cancel")]
+        public async Task<IActionResult> Cancel(string id, [FromBody] CancelRequest? req)
+        {
+            await using var transaction = await _context.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable);
+            try
+            {
+                // Evaluate outside the expression tree — ?. is not allowed inside lambdas
+                var cancelNote = req?.Reason ?? "Cancelled";
+
+                // Atomic status flip — prevents double-cancel under concurrent requests
+                var updated = await _context.Bills
+                    .Where(b => b.Id == id && b.Status != BillStatus.Cancelled)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(b => b.Status, BillStatus.Cancelled)
+                        .SetProperty(b => b.Notes, cancelNote));
+
+                if (updated == 0)
+                {
+                    var exists = await _context.Bills.AnyAsync(b => b.Id == id);
+                    return exists
+                        ? BadRequest(new { message = "Bill already cancelled" })
+                        : NotFound(new { message = "Bill not found" });
+                }
+
+                // Restore stock
+                var bill = await _context.Bills.Include(b => b.Items)
+                    .FirstOrDefaultAsync(b => b.Id == id);
+
+                foreach (var item in bill!.Items)
+                {
+                    var med = await _context.Medicines
+                        .FirstOrDefaultAsync(m => m.Code == item.MedicineCode);
+                    if (med != null)
+                    {
+                        med.Stock += (int)item.Qty;
+                        med.LastUpdated = DateTime.Now;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Bill {BillId} cancelled by {User}. Reason: {Reason}",
+                    id, User.Identity?.Name, req?.Reason ?? "No reason given");
+
+                return Ok(new { message = "Bill cancelled and stock restored", id });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                var cid = HttpContext.TraceIdentifier;
+                _logger.LogError(ex, "[{CorrelationId}] Failed to cancel bill {BillId} for user {User}", cid, id, User.Identity?.Name);
+                return StatusCode(500, new { message = "Failed to cancel bill. Please try again.", correlationId = cid });
+            }
+        }
+    }
+
+    public record CancelRequest(string? Reason);
+}

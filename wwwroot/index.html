@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nexffy — Pharmacy POS</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --primary:#2563eb;--primary-dark:#1d4ed8;--primary-light:#eff6ff;--primary-subtle:#dbeafe;
+      --success:#059669;--success-light:#d1fae5;
+      --warning:#d97706;--warning-light:#fef3c7;
+      --danger:#dc2626;--danger-light:#fee2e2;
+      --gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-300:#cbd5e1;
+      --gray-400:#94a3b8;--gray-500:#64748b;--gray-600:#475569;--gray-700:#334155;
+      --gray-800:#1e293b;--gray-900:#0f172a;
+      --white:#fff;--radius:12px;--radius-sm:8px;
+      --shadow-xs:0 1px 2px rgba(0,0,0,.05);
+      --shadow-sm:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+      --shadow:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -2px rgba(0,0,0,.05);
+      --shadow-md:0 10px 15px -3px rgba(0,0,0,.08),0 4px 6px -4px rgba(0,0,0,.05);
+      --shadow-lg:0 20px 25px -5px rgba(0,0,0,.12),0 8px 10px -6px rgba(0,0,0,.06);
+    }
+    body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--gray-50);color:var(--gray-800);line-height:1.5}
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:10px}
+    ::-webkit-scrollbar-thumb:hover{background:var(--gray-400)}
+
+    /* ── Login ─────────────────────────────────── */
+    #loginScreen{
+      position:fixed;inset:0;
+      background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 55%,#2563eb 100%);
+      display:flex;align-items:center;justify-content:center;z-index:9000;
+    }
+    .login-box{
+      background:var(--white);border-radius:20px;padding:44px 40px 36px;width:380px;
+      max-width:95vw;box-shadow:0 25px 50px rgba(0,0,0,.4);
+    }
+    .login-logo{text-align:center;margin-bottom:24px}
+    .login-logo .rx{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:58px;height:58px;background:var(--primary);border-radius:16px;
+      font-size:1.7rem;margin-bottom:14px;box-shadow:0 8px 20px rgba(37,99,235,.35);
+    }
+    .login-box h1{font-size:1.6rem;font-weight:800;color:var(--gray-900);text-align:center;margin-bottom:4px}
+    .login-box p{color:var(--gray-400);font-size:.8rem;text-align:center;margin-bottom:28px}
+    .login-field{margin-bottom:16px}
+    .login-field label{font-size:.74rem;color:var(--gray-600);display:block;margin-bottom:5px;font-weight:600}
+    .login-field input{
+      width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);
+      border-radius:var(--radius-sm);font-size:.92rem;outline:none;
+      transition:border-color .15s,box-shadow .15s;
+    }
+    .login-field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+    #loginError{color:var(--danger);font-size:.8rem;text-align:center;min-height:20px;margin-top:6px}
+    .btn-login{
+      width:100%;padding:12px;background:var(--primary);color:#fff;
+      border:none;border-radius:var(--radius-sm);font-size:.94rem;font-weight:700;
+      cursor:pointer;margin-top:10px;transition:background .15s,box-shadow .15s;
+      box-shadow:0 4px 14px rgba(37,99,235,.35);
+    }
+    .btn-login:hover{background:var(--primary-dark);box-shadow:0 6px 18px rgba(37,99,235,.4)}
+    .btn-login:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
+
+    /* ── App Shell ─────────────────────────────── */
+    #appShell{display:flex;height:100vh;overflow:hidden}
+    .sidebar{
+      width:230px;
+      background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);
+      display:flex;flex-direction:column;flex-shrink:0;transition:transform .25s;z-index:100;
+    }
+    .logo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .logo-inner{display:flex;align-items:center;gap:10px}
+    .logo-icon{
+      width:38px;height:38px;background:var(--primary);border-radius:10px;
+      display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+      flex-shrink:0;box-shadow:0 4px 12px rgba(37,99,235,.4);
+    }
+    .logo-text h1{color:#fff;font-size:1.1rem;font-weight:800;letter-spacing:-.3px}
+    .logo-text span{color:#64748b;font-size:.66rem;display:block;margin-top:1px;letter-spacing:.06em;text-transform:uppercase}
+    .nav-section{padding:18px 18px 5px;font-size:.61rem;font-weight:700;color:#475569;letter-spacing:.1em;text-transform:uppercase}
+    nav{flex:1;padding:6px 0;overflow-y:auto}
+    nav a{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 16px;margin:1px 8px;border-radius:8px;
+      color:#94a3b8;text-decoration:none;font-size:.84rem;cursor:pointer;
+      transition:all .15s;user-select:none;border-left:3px solid transparent;
+    }
+    nav a .icon{font-size:.92rem;width:22px;text-align:center;flex-shrink:0}
+    nav a:hover{background:rgba(255,255,255,.06);color:#cbd5e1;border-left-color:rgba(255,255,255,.12)}
+    nav a.active{background:rgba(37,99,235,.18);color:#fff;border-left-color:var(--primary);font-weight:600}
+    .sidebar-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.06);color:#475569;font-size:.69rem}
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+    /* ── Topbar ─────────────────────────────────── */
+    .topbar{
+      background:var(--white);border-bottom:1px solid var(--gray-200);
+      padding:0 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+      height:56px;box-shadow:0 1px 3px rgba(0,0,0,.06);
+    }
+    .topbar h2{font-size:.96rem;font-weight:700;flex:1;color:var(--gray-800)}
+    .hamburger{display:none;background:none;border:none;cursor:pointer;font-size:1.2rem;padding:6px;color:var(--gray-600);border-radius:7px}
+    .hamburger:hover{background:var(--gray-100)}
+    .topbar-right{display:flex;align-items:center;gap:8px}
+    .user-pill{display:flex;align-items:center;gap:7px;background:var(--gray-100);border-radius:20px;padding:4px 12px 4px 4px}
+    .user-ava{
+      width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;
+    }
+    #userBadge{font-size:.8rem;color:var(--gray-700);font-weight:500}
+    .btn-logout{
+      background:none;border:1.5px solid var(--gray-200);border-radius:8px;
+      padding:5px 12px;font-size:.78rem;cursor:pointer;color:var(--gray-600);
+      transition:all .15s;font-weight:500;
+    }
+    .btn-logout:hover{background:var(--danger-light);border-color:#fca5a5;color:var(--danger)}
+    .content{flex:1;overflow-y:auto;padding:20px}
+
+    /* ── Stat Cards ────────────────────────────── */
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:14px;margin-bottom:22px}
+    .stat-card{
+      background:var(--white);border-radius:var(--radius);padding:18px;
+      box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);
+      display:flex;align-items:center;gap:14px;transition:box-shadow .15s,transform .15s;
+    }
+    .stat-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+    .stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0}
+    .stat-body{flex:1;min-width:0}
+    .stat-card .val{font-size:1.4rem;font-weight:800;margin-bottom:2px;line-height:1.1}
+    .stat-card .lbl{font-size:.69rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;font-weight:500}
+    .stat-card.blue .stat-icon{background:var(--primary-subtle);color:var(--primary)}
+    .stat-card.blue .val{color:var(--primary)}
+    .stat-card.green .stat-icon{background:var(--success-light);color:var(--success)}
+    .stat-card.green .val{color:var(--success)}
+    .stat-card.orange .stat-icon{background:var(--warning-light);color:var(--warning)}
+    .stat-card.orange .val{color:var(--warning)}
+    .stat-card.red .stat-icon{background:var(--danger-light);color:var(--danger)}
+    .stat-card.red .val{color:var(--danger)}
+
+    /* ── Tables ────────────────────────────────── */
+    .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);overflow:hidden;margin-bottom:18px}
+    .card-header{padding:14px 18px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
+    .card-header h3{font-size:.86rem;font-weight:700;color:var(--gray-700)}
+    table{width:100%;border-collapse:collapse;font-size:.83rem}
+    th{background:var(--gray-50);padding:10px 14px;text-align:left;font-size:.69rem;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-500);font-weight:600;border-bottom:1px solid var(--gray-200)}
+    td{padding:10px 14px;border-bottom:1px solid var(--gray-100);vertical-align:middle;color:var(--gray-700)}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:var(--gray-50)}
+
+    /* ── Forms ─────────────────────────────────── */
+    .form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+    input,select{
+      padding:8px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);
+      font-size:.85rem;outline:none;background:var(--white);color:var(--gray-800);
+      transition:border-color .15s,box-shadow .15s;
+    }
+    input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+    .input-lg{flex:1;min-width:150px}
+
+    /* ── Buttons ────────────────────────────────── */
+    .btn{
+      padding:8px 16px;border:none;border-radius:var(--radius-sm);
+      font-size:.83rem;font-weight:600;cursor:pointer;
+      transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;
+    }
+    .btn:active{transform:scale(.97)}
+    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .btn-primary{background:var(--primary);color:#fff;box-shadow:0 1px 3px rgba(37,99,235,.25)}
+    .btn-primary:hover{background:var(--primary-dark)}
+    .btn-success{background:var(--success);color:#fff;box-shadow:0 1px 3px rgba(5,150,105,.25)}
+    .btn-success:hover{background:#047857}
+    .btn-danger{background:var(--danger-light);color:var(--danger)}
+    .btn-danger:hover{background:#fecaca}
+    .btn-warning{background:var(--warning-light);color:var(--warning)}
+    .btn-ghost{background:none;border:1.5px solid var(--gray-200);color:var(--gray-600)}
+    .btn-ghost:hover{background:var(--gray-100)}
+    .btn-sm{padding:4px 10px;font-size:.75rem;border-radius:6px}
+
+    /* ── Badges ─────────────────────────────────── */
+    .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.69rem;font-weight:700}
+    .badge-saved{background:var(--success-light);color:var(--success)}
+    .badge-cancelled{background:var(--danger-light);color:var(--danger)}
+    .badge-cat{background:var(--primary-subtle);color:var(--primary)}
+    .badge-low{background:var(--warning-light);color:var(--warning)}
+
+    /* ── Pagination ─────────────────────────────── */
+    .pagination{display:flex;align-items:center;gap:8px;padding:14px 0;justify-content:center}
+    .pagination span{font-size:.81rem;color:var(--gray-400)}
+
+    /* ── POS Layout ─────────────────────────────── */
+    .pos-layout{display:grid;grid-template-columns:1fr 370px;height:100%;overflow:hidden}
+    .pos-left{padding:16px;overflow-y:auto;background:var(--gray-50)}
+    .pos-right{background:var(--white);border-left:1px solid var(--gray-200);display:flex;flex-direction:column;height:calc(100vh - 56px);overflow:hidden}
+    .med-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+    .med-card{
+      background:var(--white);border:1.5px solid var(--gray-200);border-radius:var(--radius);
+      padding:14px;cursor:pointer;box-shadow:var(--shadow-xs);
+      transition:border-color .15s,box-shadow .15s,transform .1s;user-select:none;
+    }
+    .med-card:hover{border-color:var(--primary);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+    .med-card:active{transform:scale(.97)}
+    .med-card.out-of-stock{opacity:.45;cursor:not-allowed}
+    .med-card .mcat{display:inline-block;background:var(--primary-subtle);color:var(--primary);border-radius:4px;padding:2px 7px;font-size:.63rem;font-weight:700;margin-bottom:6px}
+    .med-card .mname{font-weight:700;font-size:.85rem;margin-bottom:2px;color:var(--gray-800);line-height:1.3}
+    .med-card .mgen{font-size:.7rem;color:var(--gray-400);margin-bottom:8px}
+    .med-card .mprice{color:var(--primary);font-weight:800;font-size:.96rem}
+    .med-card .mstock{font-size:.69rem;color:var(--gray-400);margin-top:3px}
+
+    /* ── Cart ───────────────────────────────────── */
+    .cart-section{padding:14px;border-bottom:1px solid var(--gray-100);background:var(--gray-50)}
+    .cart-section label{font-size:.68rem;color:var(--gray-500);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+    .cart-section input{width:100%;margin-bottom:8px}
+    .cart-items{flex:1;overflow-y:auto}
+    .cart-row{display:grid;grid-template-columns:1fr 82px 82px 22px;align-items:center;gap:5px;padding:9px 14px;border-bottom:1px solid var(--gray-100);transition:background .1s}
+    .cart-row:hover{background:var(--gray-50)}
+    .cart-row .cn{font-size:.81rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cart-row .cs{font-size:.67rem;color:var(--gray-400)}
+    .qty-ctrl{display:flex;align-items:center;gap:2px}
+    .qty-ctrl button{
+      width:22px;height:22px;border:1.5px solid var(--gray-200);background:var(--white);
+      border-radius:5px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;
+      justify-content:center;flex-shrink:0;transition:all .12s;color:var(--gray-600);
+    }
+    .qty-ctrl button:hover{background:var(--primary);border-color:var(--primary);color:#fff}
+    .qty-ctrl input{width:30px;text-align:center;padding:1px 2px;font-size:.8rem}
+    .cart-row .ca{font-size:.82rem;font-weight:700;text-align:right;color:var(--primary)}
+    .rm-btn{background:none;border:none;cursor:pointer;color:var(--gray-300);font-size:.9rem;padding:2px;line-height:1;transition:color .1s}
+    .rm-btn:hover{color:var(--danger)}
+    .cart-empty{padding:32px;text-align:center;color:var(--gray-300);font-size:.85rem}
+    .totals-section{padding:12px 14px;border-top:1px solid var(--gray-200)}
+    .tot-row{display:flex;justify-content:space-between;font-size:.83rem;margin-bottom:5px;color:var(--gray-600)}
+    .tot-row input{width:90px;text-align:right;padding:3px 6px}
+    .tot-row.grand{font-size:1rem;font-weight:800;color:var(--gray-800);border-top:2px solid var(--gray-200);padding-top:8px;margin-top:6px}
+    .cart-actions{padding:10px 14px;display:flex;gap:7px;border-top:1px solid var(--gray-100);flex-shrink:0}
+    .cart-actions .btn{flex:1;justify-content:center}
+
+    /* ── Modals ─────────────────────────────────── */
+    .modal-overlay{
+      display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);
+      backdrop-filter:blur(3px);z-index:500;align-items:center;justify-content:center;
+    }
+    .modal-overlay.open{display:flex}
+    .modal{
+      background:var(--white);border-radius:16px;padding:24px;width:480px;
+      max-width:95vw;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;
+      animation:modalIn .2s ease;
+    }
+    @keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+    .modal-wide{width:640px}
+    .modal h3{font-size:.94rem;font-weight:700;margin-bottom:16px;color:var(--gray-800);padding-bottom:12px;border-bottom:1px solid var(--gray-100)}
+    .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-col{display:flex;flex-direction:column;gap:5px}
+    .form-col label{font-size:.73rem;color:var(--gray-500);font-weight:600}
+    .form-col input,.form-col select{width:100%}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100)}
+
+    /* ── Receipt ────────────────────────────────── */
+    .receipt-area{font-family:'Courier New',monospace;font-size:.8rem;background:var(--gray-50);border-radius:8px;padding:16px;max-height:420px;overflow-y:auto;border:1px solid var(--gray-100)}
+    .receipt-area hr{border:none;border-top:1px dashed var(--gray-300);margin:8px 0}
+    .receipt-row{display:flex;justify-content:space-between}
+
+    /* ── Toast ──────────────────────────────────── */
+    #toast{
+      position:fixed;bottom:20px;right:20px;padding:11px 18px;border-radius:10px;
+      font-size:.83rem;font-weight:500;opacity:0;transition:opacity .25s,transform .25s;
+      pointer-events:none;box-shadow:var(--shadow-md);z-index:9999;
+      background:var(--gray-800);color:#fff;max-width:320px;transform:translateY(8px);
+    }
+    #toast.err{background:var(--danger)}
+    #toast.ok{background:var(--success)}
+    #toast.show{opacity:1;transform:translateY(0)}
+
+    /* ── Pages ──────────────────────────────────── */
+    .page{display:none}
+    .page.active{display:block}
+    #page-pos.active{display:flex;flex-direction:column;height:calc(100vh - 56px);overflow:hidden}
+
+    /* ── Loading ────────────────────────────────── */
+    .loading-row td{text-align:center;padding:28px;color:var(--gray-400)}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--gray-200);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Sidebar overlay ────────────────────────── */
+    .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:99;backdrop-filter:blur(2px)}
+
+    /* ── Dashboard grid ─────────────────────────── */
+    .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+
+    /* ── Period Tabs ─────────────────────────────── */
+    .period-tabs{display:flex;gap:3px;margin-bottom:18px;background:var(--white);border-radius:10px;padding:4px;box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);width:fit-content}
+    .period-tab{padding:6px 18px;border:none;border-radius:7px;font-size:.8rem;font-weight:500;cursor:pointer;background:transparent;color:var(--gray-500);transition:all .15s}
+    .period-tab.active{background:var(--primary);color:#fff;font-weight:600;box-shadow:0 1px 3px rgba(37,99,235,.3)}
+    .period-tab:not(.active):hover{background:var(--gray-100);color:var(--gray-700)}
+
+    /* ── Chart / Status blocks ───────────────────── */
+    .chart-empty{text-align:center;color:var(--gray-400);padding:24px;font-size:.83rem}
+
+    @media(max-width:768px){
+      .sidebar{position:fixed;top:0;left:0;height:100vh;transform:translateX(-100%)}
+      .sidebar.open{transform:translateX(0)}
+      .sidebar-overlay.open{display:block}
+      .hamburger{display:block}
+      .pos-layout{grid-template-columns:1fr}
+      .pos-right{height:auto;max-height:60vh}
+      #page-pos.active{height:auto;overflow:auto}
+      .modal-grid{grid-template-columns:1fr}
+      .stat-grid{grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Login Screen ─────────────────────────────── -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo"><div class="rx">💊</div></div>
+    <h1>Nexffy</h1>
+    <p>Pharmacy Point of Sale</p>
+    <div class="login-field">
+      <label>Username</label>
+      <input id="loginUser" type="text" placeholder="admin" autocomplete="username" />
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <div id="loginError"></div>
+    <button class="btn-login" id="loginBtn" onclick="login()">Login</button>
+  </div>
+</div>
+
+<!-- ── App Shell ─────────────────────────────────── -->
+<div id="appShell" style="display:none">
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <div class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="logo-inner">
+        <div class="logo-icon">💊</div>
+        <div class="logo-text"><h1>Nexffy</h1><span>Pharmacy POS</span></div>
+      </div>
+    </div>
+    <nav id="mainNav">
+      <div class="nav-section">Main Menu</div>
+      <a class="active" data-page="dashboard"><span class="icon">📊</span> Dashboard</a>
+      <a data-page="pos"><span class="icon">🛒</span> Point of Sale</a>
+      <a data-page="medicines"><span class="icon">💊</span> Medicines</a>
+      <a data-page="bills"><span class="icon">🧾</span> Bills</a>
+    </nav>
+    <div class="sidebar-footer">Nexffy v1.1 · NexffyDB</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <h2 id="pageTitle">Dashboard</h2>
+      <div class="topbar-right">
+        <div class="user-pill"><div class="user-ava" id="userInitial">A</div><span id="userBadge">admin</span></div>
+        <button class="btn btn-ghost" id="changePassBtn" style="padding:5px 11px;font-size:.78rem">🔑 Password</button>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="content page active" id="page-dashboard">
+      <div class="period-tabs">
+        <button class="period-tab active" data-period="today">Today</button>
+        <button class="period-tab" data-period="week">This Week</button>
+        <button class="period-tab" data-period="month">This Month</button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card blue"><div class="stat-icon">💰</div><div class="stat-body"><div class="val" id="ds-today-sales">—</div><div class="lbl" id="ds-sales-lbl">Today's Sales (PKR)</div></div></div>
+        <div class="stat-card green"><div class="stat-icon">🧾</div><div class="stat-body"><div class="val" id="ds-today-bills">—</div><div class="lbl" id="ds-bills-lbl">Bills Today</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon">📈</div><div class="stat-body"><div class="val" id="ds-total-rev">—</div><div class="lbl">Total Revenue (PKR)</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon">🏦</div><div class="stat-body"><div class="val" id="ds-inv-value">—</div><div class="lbl">Inventory Value (PKR)</div></div></div>
+        <div class="stat-card orange"><div class="stat-icon">⚠️</div><div class="stat-body"><div class="val" id="ds-low-stock">—</div><div class="lbl">Low Stock Items</div></div></div>
+        <div class="stat-card green"><div class="stat-icon">💊</div><div class="stat-body"><div class="val" id="ds-medicines">—</div><div class="lbl">Total Medicines</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon">📋</div><div class="stat-body"><div class="val" id="ds-total-bills">—</div><div class="lbl">Total Bills</div></div></div>
+      </div>
+      <div class="dash-grid">
+        <!-- Revenue chart — full width -->
+        <div class="card" style="grid-column:1/-1">
+          <div class="card-header"><h3>Revenue — Last 7 Days</h3></div>
+          <div id="revenueChart" style="padding:16px 16px 8px;min-height:80px"></div>
+        </div>
+        <!-- Category donut + Bill status -->
+        <div class="card">
+          <div class="card-header"><h3>Sales by Category</h3></div>
+          <div id="categoryDonut" style="padding:16px;min-height:60px"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Bill Status</h3><span id="ds-period-label" style="font-size:.72rem;color:var(--gray-400)">Today</span></div>
+          <div id="billStatus" style="padding:16px;min-height:60px"></div>
+        </div>
+        <!-- Top medicines + Recent bills -->
+        <div class="card">
+          <div class="card-header"><h3>Top Medicines Sold</h3></div>
+          <table><thead><tr><th>#</th><th>Medicine</th><th>Qty Sold</th></tr></thead>
+          <tbody id="topMedTable"><tr class="loading-row"><td colspan="3"><span class="spinner"></span>Loading…</td></tr></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Recent Bills</h3><button class="btn btn-sm btn-ghost" onclick="navigate('bills')">View All</button></div>
+          <table><thead><tr><th>Bill</th><th>Patient</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody id="recentBillsTable"><tr class="loading-row"><td colspan="4"><span class="spinner"></span>Loading…</td></tr></tbody></table>
+        </div>
+        <!-- Expiry calendar + Expiring soon -->
+        <div class="card">
+          <div class="card-header"><h3>Expiry Calendar</h3></div>
+          <div id="expiryCalendar" style="padding:14px;min-height:60px"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Expiring Soon <span style="font-size:.72rem;font-weight:400;color:var(--gray-400)">(90 days)</span></h3></div>
+          <table><thead><tr><th>Medicine</th><th>Expiry</th><th>Stock</th></tr></thead>
+          <tbody id="expiryTable"><tr class="loading-row"><td colspan="3"><span class="spinner"></span>Loading…</td></tr></tbody></table>
+        </div>
+        <!-- Low stock — full width -->
+        <div class="card" style="grid-column:1/-1">
+          <div class="card-header"><h3>Low Stock Alert</h3><button class="btn btn-sm btn-ghost" onclick="navigate('medicines')">Manage</button></div>
+          <table><thead><tr><th>Medicine</th><th>Stock</th><th>Unit</th></tr></thead>
+          <tbody id="lowStockTable"><tr class="loading-row"><td colspan="3"><span class="spinner"></span>Loading…</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- POS -->
+    <div class="page" id="page-pos">
+      <div class="pos-layout">
+        <div class="pos-left">
+          <div class="form-row">
+            <input class="input-lg" type="text" id="posSearch" placeholder="🔍 Search medicine / scan barcode…" autocomplete="off"/>
+            <select id="posCatFilter"><option value="">All Categories</option></select>
+          </div>
+          <div class="med-grid" id="posMedGrid">
+            <div style="color:var(--gray-400);grid-column:1/-1;text-align:center;padding:30px">Loading medicines…</div>
+          </div>
+        </div>
+        <div class="pos-right">
+          <div class="cart-section">
+            <label>Patient Name</label>
+            <input type="text" id="patientName" placeholder="Walk-in Patient" autocomplete="off"/>
+            <label>Patient Code</label>
+            <input type="text" id="patientCode" placeholder="Auto" autocomplete="off"/>
+          </div>
+          <div class="cart-items" id="cartItems">
+            <div class="cart-empty">Tap a medicine to add it</div>
+          </div>
+          <div class="totals-section">
+            <div class="tot-row"><span>Subtotal</span><span id="posSubtotal">PKR 0.00</span></div>
+            <div class="tot-row"><span>Discount (PKR)</span><input type="number" id="posDiscount" value="0" min="0"/></div>
+            <div class="tot-row grand"><span>Total</span><span id="posTotal">PKR 0.00</span></div>
+          </div>
+          <div class="cart-actions">
+            <button class="btn btn-danger" id="clearCartBtn">Clear</button>
+            <button class="btn btn-ghost" id="printCartBtn">🖨 Print</button>
+            <button class="btn btn-success" id="saveBillBtn">Save Bill</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDICINES -->
+    <div class="content page" id="page-medicines">
+      <div class="form-row">
+        <input class="input-lg" type="text" id="medSearch" placeholder="Search name, generic, or code…"/>
+        <select id="medCatFilter"><option value="">All Categories</option></select>
+        <button class="btn btn-ghost" id="manageCatBtn">🏷 Categories</button>
+        <button class="btn btn-primary" id="addMedBtn">+ Add Medicine</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Code</th><th>Name</th><th>Generic</th><th>Category</th><th>Unit</th><th>Price</th><th>Stock</th><th>Expiry</th><th>Actions</th></tr></thead>
+          <tbody id="medTableBody"><tr class="loading-row"><td colspan="9"><span class="spinner"></span>Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="medPagination"></div>
+    </div>
+
+    <!-- BILLS -->
+    <div class="content page" id="page-bills">
+      <div class="form-row">
+        <input class="input-lg" type="text" id="billPatient" placeholder="Search patient name or code…"/>
+        <input type="date" id="billDate"/>
+        <button class="btn btn-ghost" id="clearBillFilterBtn">Clear</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Bill #</th><th>Patient</th><th>Date</th><th>Items</th><th>Total</th><th>Discount</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="billTableBody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span>Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="billPagination"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Medicine Modal -->
+<div class="modal-overlay" id="medModal">
+  <div class="modal">
+    <h3 id="medModalTitle">Add New Medicine</h3>
+    <div class="modal-grid">
+      <div class="form-col"><label>Code *</label><input id="mCode" placeholder="MED-011" maxlength="50"/></div>
+      <div class="form-col"><label>Name *</label><input id="mName" placeholder="Panadol 500mg" maxlength="200"/></div>
+      <div class="form-col"><label>Generic Name</label><input id="mGeneric" placeholder="Paracetamol" maxlength="200"/></div>
+      <div class="form-col"><label>Category</label><input id="mCategory" placeholder="Painkiller" list="catList" maxlength="100"/><datalist id="catList"></datalist></div>
+      <div class="form-col"><label>Unit</label>
+        <select id="mUnit"><option>Strip</option><option>Bottle</option><option>Vial</option><option>Sachet</option><option>Tablet</option><option>Capsule</option><option>Box</option></select>
+      </div>
+      <div class="form-col"><label>Price (PKR) *</label><input id="mPrice" type="number" min="0.01" step="0.01" placeholder="0.00"/></div>
+      <div class="form-col"><label>Stock</label><input id="mStock" type="number" min="0" placeholder="0"/></div>
+      <div class="form-col"><label>Expiry Date</label><input id="mExpiry" type="date"/></div>
+      <div class="form-col" style="grid-column:1/-1"><label>Manufacturer</label><input id="mManufacturer" placeholder="GSK" maxlength="200"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="closeMedModalBtn">Cancel</button>
+      <button class="btn btn-primary" id="medSaveBtn">Save Medicine</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bill Detail Modal -->
+<div class="modal-overlay" id="billModal">
+  <div class="modal modal-wide">
+    <h3 id="billModalTitle">Bill Details</h3>
+    <div class="receipt-area" id="billModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="cancelBillBtn" style="margin-right:auto">Cancel Bill</button>
+      <button class="btn btn-primary" id="printBillBtn">🖨 Print Receipt</button>
+      <button class="btn btn-ghost" id="closeBillModalBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Categories Modal -->
+<div class="modal-overlay" id="catMgmtModal">
+  <div class="modal">
+    <h3>Manage Categories</h3>
+    <div class="form-row">
+      <input class="input-lg" type="text" id="newCatInput" placeholder="New category name…" maxlength="100" autocomplete="off"/>
+      <button class="btn btn-primary" id="addCatBtn">Add</button>
+    </div>
+    <div id="catMgmtList" style="max-height:320px;overflow-y:auto;margin-top:6px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="closeCatMgmtBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="passModal">
+  <div class="modal">
+    <h3>Change Password</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <div class="form-col"><label>Current Password</label><input type="password" id="cpCurrent" autocomplete="current-password"/></div>
+      <div class="form-col"><label>New Password <span style="font-weight:400;color:var(--gray-400)">(min 8 chars)</span></label><input type="password" id="cpNew" autocomplete="new-password"/></div>
+      <div class="form-col"><label>Confirm New Password</label><input type="password" id="cpConfirm" autocomplete="new-password"/></div>
+    </div>
+    <div id="passModalErr" style="color:var(--danger);font-size:.82rem;margin-top:8px;min-height:18px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="closePassModalBtn">Cancel</button>
+      <button class="btn btn-primary" id="savePassBtn">Change Password</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+const API = '/api';
+let allMedicines = [];
+let cart = [];
+let editingMedCode = null;
+let currentBill = null;
+let medPage = 1, medTotal = 0;
+let billPage = 1, billTotal = 0;
+const PAGE_SIZE = 20;
+let dashPeriod = 'today';
+
+// ── Security: escape HTML ─────────────────────────
+function h(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ── Auth ──────────────────────────────────────────
+async function apiFetch(url, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  const res = await fetch(API + url, { ...opts, headers, credentials: 'include' });
+  if (res.status === 401) {
+    localStorage.removeItem('nexffy_cart');
+    showLogin();
+    throw new Error('Session expired. Please login again.');
+  }
+  if (res.status === 429) {
+    showToast('Too many requests. Please wait.', true);
+    throw new Error('Rate limited');
+  }
+  return res;
+}
+
+async function login() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  err.textContent = '';
+  if (!username || !password) { err.textContent = 'Enter username and password'; return; }
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  try {
+    const res = await fetch(API + '/Auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('userBadge').textContent = data.username;
+      document.getElementById('userInitial').textContent = (data.username || 'A')[0].toUpperCase();
+      hideLogin();
+      initApp();
+    } else {
+      err.textContent = data.message || 'Invalid credentials';
+    }
+  } catch {
+    err.textContent = 'Cannot reach server';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Login';
+  }
+}
+
+async function logout() {
+  await fetch(API + '/Auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+  localStorage.removeItem('nexffy_cart');
+  showLogin();
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appShell').style.display = 'none';
+  document.getElementById('loginPass').value = '';
+}
+
+function hideLogin() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+}
+
+// ── Navigation ────────────────────────────────────
+document.getElementById('mainNav').addEventListener('click', e => {
+  const a = e.target.closest('a[data-page]');
+  if (!a) return;
+  navigate(a.dataset.page, a);
+  closeSidebar();
+});
+
+function navigate(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#mainNav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const link = el instanceof Element ? el : document.querySelector(`#mainNav a[data-page="${page}"]`);
+  if (link) link.classList.add('active');
+  const titles = { dashboard:'Dashboard', pos:'Point of Sale', medicines:'Medicine Catalog', bills:'Bills & History' };
+  document.getElementById('pageTitle').textContent = titles[page] || page;
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'pos') { loadPosMedicines(); focusPosSearch(); }
+  if (page === 'medicines') { medPage = 1; loadMedicines(); loadCategories(); }
+  if (page === 'bills') { billPage = 1; loadBills(); }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ── Dashboard ─────────────────────────────────────
+document.querySelector('.period-tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.period-tab');
+  if (!tab) return;
+  document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  dashPeriod = tab.dataset.period;
+  loadDashboard();
+});
+
+async function loadDashboard() {
+  try {
+    const res = await apiFetch(`/Dashboard?period=${dashPeriod}`);
+    const d = await res.json();
+
+    // ── Stat cards ──
+    const periodLabels = { today: "Today's Sales (PKR)", week: "This Week (PKR)", month: "This Month (PKR)" };
+    const billLabels   = { today: 'Bills Today', week: 'Bills This Week', month: 'Bills This Month' };
+    document.getElementById('ds-today-sales').textContent = fmt(d.periodSales);
+    document.getElementById('ds-today-bills').textContent = d.periodBillCount;
+    document.getElementById('ds-total-rev').textContent   = fmt(d.totalRevenue);
+    document.getElementById('ds-inv-value').textContent   = fmt(d.inventoryValue);
+    document.getElementById('ds-low-stock').textContent   = d.lowStock;
+    document.getElementById('ds-medicines').textContent   = d.totalMedicines;
+    document.getElementById('ds-total-bills').textContent = d.totalBills;
+    document.getElementById('ds-sales-lbl').textContent   = periodLabels[dashPeriod] || "Sales (PKR)";
+    document.getElementById('ds-bills-lbl').textContent   = billLabels[dashPeriod]   || 'Bills';
+    const pLbl = { today: 'Today', week: 'This Week', month: 'This Month' };
+    document.getElementById('ds-period-label').textContent = pLbl[dashPeriod] || '';
+
+    // ── Charts ──
+    renderRevenueChart(d.dailyRevenue || []);
+    renderCategoryDonut(d.salesByCategory || []);
+    renderBillStatus(d.savedCount, d.cancelledCount);
+    renderExpiryCalendar(d.expiryCalendar || []);
+
+    // ── Top medicines ──
+    document.getElementById('topMedTable').innerHTML = d.topMedicines.length
+      ? d.topMedicines.map((m, i) => `<tr><td>${i+1}</td><td>${h(m.medicineName)}</td><td><strong>${h(String(m.totalQty))}</strong></td></tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:12px">No sales yet</td></tr>';
+
+    // ── Recent bills ──
+    document.getElementById('recentBillsTable').innerHTML = d.recentBills.length
+      ? d.recentBills.map(b => `<tr>
+          <td style="color:var(--primary);font-weight:700;cursor:pointer" onclick="viewBill('${h(b.id)}')">${h(b.id)}</td>
+          <td>${h(b.patientName)}</td>
+          <td>PKR ${h(fmt(b.totalAmount))}</td>
+          <td><span class="badge badge-${b.status === 'Cancelled' ? 'cancelled' : 'saved'}">${h(b.status)}</span></td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:var(--gray-400);padding:12px">No bills yet</td></tr>';
+
+    // ── Expiring soon ──
+    document.getElementById('expiryTable').innerHTML = d.expiringMeds.length
+      ? d.expiringMeds.map(m => `<tr>
+          <td>${h(m.name)}</td>
+          <td style="color:${isExpiringSoon(m.expiryDate) ? 'var(--danger)' : 'inherit'}">${h(m.expiryDate || '—')}</td>
+          <td>${h(String(m.stock))}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:12px">None</td></tr>';
+
+    // ── Low stock ──
+    const ls = await apiFetch('/Medicines/low-stock?threshold=20');
+    const lsData = await ls.json();
+    const lsItems = lsData.items ?? [];
+    document.getElementById('lowStockTable').innerHTML = lsItems.length
+      ? lsItems.map(m => `<tr>
+          <td>${h(m.name)}</td>
+          <td><span class="badge badge-low">${h(String(m.stock))}</span></td>
+          <td>${h(m.unit)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:var(--success);padding:12px">All stock levels OK</td></tr>';
+  } catch (e) {
+    if (e.message !== 'Session expired. Please login again.')
+      showToast('Cannot load dashboard', true);
+  }
+}
+
+function renderRevenueChart(data) {
+  const el = document.getElementById('revenueChart');
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+
+  // Build a full 7-day array filling gaps with 0
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now); d.setDate(now.getDate() - i);
+    const ds = d.toISOString().slice(0, 10);
+    const found = data.find(x => x.date === ds);
+    days.push({ date: ds, revenue: found ? found.revenue : 0 });
+  }
+
+  const maxRev = Math.max(...days.map(d => d.revenue), 1);
+  const BAR_W = 38, GAP = 14, H = 110, AXIS_H = 20, PAD_TOP = 22;
+  const totalW = days.length * (BAR_W + GAP) - GAP;
+  const W = totalW + 20;
+  const dayAbbr = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const bars = days.map((d, i) => {
+    const barH = Math.max(3, (d.revenue / maxRev) * H);
+    const x = 10 + i * (BAR_W + GAP);
+    const y = PAD_TOP + H - barH;
+    const isToday = d.date === todayStr;
+    const fill = isToday ? '#2563eb' : '#e2e8f0';
+    const textFill = isToday ? '#2563eb' : '#94a3b8';
+    const label = d.revenue >= 1000 ? (d.revenue / 1000).toFixed(1) + 'k' : String(Math.round(d.revenue));
+    return `
+      <rect x="${x}" y="${y}" width="${BAR_W}" height="${barH}" rx="5" fill="${fill}"/>
+      ${d.revenue > 0 ? `<text x="${x + BAR_W/2}" y="${y - 5}" text-anchor="middle" font-size="9" fill="${textFill}" font-weight="600">${label}</text>` : ''}
+      <text x="${x + BAR_W/2}" y="${PAD_TOP + H + AXIS_H - 4}" text-anchor="middle" font-size="10" fill="${isToday ? '#2563eb' : '#64748b'}" font-weight="${isToday ? '700' : '400'}">${dayAbbr[new Date(d.date + 'T12:00:00').getDay()]}</text>
+    `;
+  }).join('');
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${PAD_TOP + H + AXIS_H}" style="width:100%;max-height:165px;display:block">
+    <line x1="0" y1="${PAD_TOP + H}" x2="${W}" y2="${PAD_TOP + H}" stroke="#e2e8f0" stroke-width="1"/>
+    ${bars}
+  </svg>`;
+}
+
+function renderCategoryDonut(data) {
+  const el = document.getElementById('categoryDonut');
+  if (!data.length) {
+    el.innerHTML = '<p class="chart-empty">No sales data for this period</p>';
+    return;
+  }
+  const colors = ['#2563eb','#059669','#d97706','#dc2626','#7c3aed','#0891b2'];
+  const total = data.reduce((s, x) => s + x.revenue, 0);
+  const R = 60, r = 36, CX = 80, CY = 80;
+
+  let slicesSvg = '';
+  if (data.length === 1) {
+    // Full circle for single category
+    slicesSvg = `<circle cx="${CX}" cy="${CY}" r="${R}" fill="${colors[0]}"/>`;
+  } else {
+    let angle = -Math.PI / 2;
+    slicesSvg = data.map((d, i) => {
+      const frac = d.revenue / total;
+      const a1 = angle, a2 = angle + frac * 2 * Math.PI;
+      angle = a2;
+      const x1 = CX + R * Math.cos(a1), y1 = CY + R * Math.sin(a1);
+      const x2 = CX + R * Math.cos(a2), y2 = CY + R * Math.sin(a2);
+      const xi1 = CX + r * Math.cos(a1), yi1 = CY + r * Math.sin(a1);
+      const xi2 = CX + r * Math.cos(a2), yi2 = CY + r * Math.sin(a2);
+      const lg = frac > 0.5 ? 1 : 0;
+      return `<path d="M${x1},${y1} A${R},${R},0,${lg},1,${x2},${y2} L${xi2},${yi2} A${r},${r},0,${lg},0,${xi1},${yi1} Z" fill="${colors[i % colors.length]}" opacity=".92"/>`;
+    }).join('');
+  }
+
+  const totalLabel = total >= 1000 ? (total / 1000).toFixed(1) + 'k' : String(Math.round(total));
+  const legend = data.map((d, i) => `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+      <div style="width:10px;height:10px;border-radius:3px;background:${colors[i % colors.length]};flex-shrink:0"></div>
+      <span style="font-size:.73rem;color:var(--gray-600);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(d.category)}</span>
+      <span style="font-size:.72rem;font-weight:700;color:var(--gray-700)">PKR ${Math.round(d.revenue).toLocaleString()}</span>
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <svg viewBox="0 0 160 160" style="width:110px;height:110px;flex-shrink:0">
+        ${slicesSvg}
+        <circle cx="${CX}" cy="${CY}" r="${r}" fill="white"/>
+        <text x="${CX}" y="${CY - 5}" text-anchor="middle" font-size="9" fill="#94a3b8">Total</text>
+        <text x="${CX}" y="${CY + 9}" text-anchor="middle" font-size="10" fill="#334155" font-weight="bold">PKR ${totalLabel}</text>
+      </svg>
+      <div style="flex:1;min-width:120px">${legend}</div>
+    </div>`;
+}
+
+function renderBillStatus(saved, cancelled) {
+  const el = document.getElementById('billStatus');
+  const total = (saved || 0) + (cancelled || 0);
+  const pct = total > 0 ? Math.round((saved / total) * 100) : 0;
+  el.innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:${total > 0 ? 14 : 0}px">
+      <div style="flex:1;background:var(--success-light);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:1.6rem;font-weight:800;color:var(--success)">${saved || 0}</div>
+        <div style="font-size:.68rem;color:var(--success);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Saved</div>
+      </div>
+      <div style="flex:1;background:var(--danger-light);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:1.6rem;font-weight:800;color:var(--danger)">${cancelled || 0}</div>
+        <div style="font-size:.68rem;color:var(--danger);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Cancelled</div>
+      </div>
+    </div>
+    ${total > 0 ? `
+    <div style="font-size:.72rem;color:var(--gray-400);margin-bottom:5px">${pct}% completion rate</div>
+    <div style="background:var(--danger-light);border-radius:20px;height:7px;overflow:hidden">
+      <div style="background:var(--success);height:100%;border-radius:20px;width:${pct}%;transition:width .6s ease"></div>
+    </div>` : ''}`;
+}
+
+function renderExpiryCalendar(data) {
+  const el = document.getElementById('expiryCalendar');
+  const now = new Date();
+  const year = now.getFullYear(), month = now.getMonth();
+  const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  const todayDay = now.getDate();
+
+  const countMap = {};
+  (data || []).forEach(x => { countMap[x.date] = x.count; });
+
+  const monthPad = String(month + 1).padStart(2, '0');
+  const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const header = dayNames.map(d => `<div style="text-align:center;font-size:.65rem;font-weight:700;color:var(--gray-400);padding:3px 0">${d}</div>`).join('');
+
+  let cells = Array(firstDayOfWeek).fill('<div></div>');
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${monthPad}-${String(day).padStart(2, '0')}`;
+    const count = countMap[dateStr] || 0;
+    const isToday = day === todayDay;
+    let bg = 'transparent', color = 'var(--gray-600)', border = isToday ? '2px solid var(--primary)' : 'none';
+    if (count >= 4) { bg = '#dc2626'; color = '#fff'; }
+    else if (count >= 2) { bg = '#d97706'; color = '#fff'; }
+    else if (count === 1) { bg = '#fef3c7'; color = '#d97706'; }
+    else if (isToday) { bg = '#dbeafe'; color = '#2563eb'; }
+    cells.push(`<div title="${count > 0 ? count + ' medicine(s) expiring' : dateStr}" style="text-align:center;font-size:.72rem;padding:4px 1px;border-radius:5px;background:${bg};color:${color};border:${border};font-weight:${isToday || count > 0 ? '700' : '400'};cursor:${count > 0 ? 'help' : 'default'}">${day}</div>`);
+  }
+
+  el.innerHTML = `
+    <div style="font-size:.79rem;font-weight:700;color:var(--gray-700);margin-bottom:8px;text-align:center">${monthName}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${header}${cells.join('')}</div>
+    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--gray-400)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#fef3c7"></span>1 expiring</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--gray-400)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#d97706"></span>2–3</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--gray-400)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#dc2626"></span>4+</span>
+    </div>`;
+}
+
+// ── POS ───────────────────────────────────────────
+async function loadPosMedicines() {
+  if (!allMedicines.length) {
+    try {
+      const res = await apiFetch('/Medicines?pageSize=500');
+      const d = await res.json();
+      allMedicines = d.items;
+    } catch { return; }
+  }
+  const cats = [...new Set(allMedicines.map(m => m.category))].sort();
+  const cf = document.getElementById('posCatFilter');
+  cf.innerHTML = '<option value="">All Categories</option>' + cats.map(c => `<option>${h(c)}</option>`).join('');
+  renderPosMeds(allMedicines);
+}
+
+function filterPosMeds() {
+  const q = document.getElementById('posSearch').value.toLowerCase();
+  const cat = document.getElementById('posCatFilter').value;
+  renderPosMeds(allMedicines.filter(m =>
+    (!cat || m.category === cat) &&
+    (!q || m.name.toLowerCase().includes(q) || m.genericName.toLowerCase().includes(q) || m.code.toLowerCase().includes(q))
+  ));
+}
+
+function renderPosMeds(list) {
+  const grid = document.getElementById('posMedGrid');
+  if (!list.length) {
+    grid.innerHTML = '<div style="color:var(--gray-400);grid-column:1/-1;text-align:center;padding:30px">No medicines found</div>';
+    return;
+  }
+  grid.innerHTML = list.map(m => `
+    <div class="med-card${m.stock <= 0 ? ' out-of-stock' : ''}" data-code="${h(m.code)}" title="${h(m.name)}">
+      <div class="mcat">${h(m.category)}</div>
+      <div class="mname">${h(m.name)}</div>
+      <div class="mgen">${h(m.genericName)}</div>
+      <div class="mprice">PKR ${h(fmt(m.price))}</div>
+      <div class="mstock">Stock: ${h(m.stock.toString())} ${h(m.unit)}${m.stock < 20 && m.stock > 0 ? ' <span class="badge badge-low">Low</span>' : ''}</div>
+    </div>`).join('');
+}
+
+// Event delegation — no inline onclick, prevents injection
+document.getElementById('posMedGrid').addEventListener('click', e => {
+  const card = e.target.closest('.med-card:not(.out-of-stock)');
+  if (card?.dataset.code) addToCart(card.dataset.code);
+});
+
+document.getElementById('posSearch').addEventListener('input', filterPosMeds);
+document.getElementById('posCatFilter').addEventListener('change', filterPosMeds);
+
+function focusPosSearch() {
+  setTimeout(() => document.getElementById('posSearch').focus(), 100);
+}
+
+// Enter key on barcode scanner auto-searches
+document.getElementById('posSearch').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const q = e.target.value.trim();
+    const exact = allMedicines.find(m => m.code.toLowerCase() === q.toLowerCase());
+    if (exact && exact.stock > 0) {
+      addToCart(exact.code);
+      e.target.value = '';
+      filterPosMeds();
+    }
+  }
+});
+
+function addToCart(code) {
+  const med = allMedicines.find(m => m.code === code);
+  if (!med) return;
+  const ex = cart.find(i => i.code === code);
+  if (ex) {
+    if (ex.qty >= med.stock) { showToast('Insufficient stock', true); return; }
+    ex.qty++;
+    ex.amount = +(ex.qty * ex.rate).toFixed(2);
+  } else {
+    cart.push({ code: med.code, name: med.name, unit: med.unit, qty: 1, rate: med.price, amount: +med.price.toFixed(2) });
+  }
+  saveCart();
+  renderCart();
+  showToast(`Added: ${med.name}`);
+}
+
+document.getElementById('cartItems').addEventListener('click', e => {
+  const row = e.target.closest('[data-cartcode]');
+  if (!row) return;
+  const code = row.dataset.cartcode;
+  if (e.target.classList.contains('qty-minus')) changeQty(code, -1);
+  else if (e.target.classList.contains('qty-plus')) changeQty(code, 1);
+  else if (e.target.classList.contains('rm-btn')) removeFromCart(code);
+});
+
+document.getElementById('cartItems').addEventListener('change', e => {
+  const inp = e.target.closest('.qty-input');
+  if (inp) setQty(inp.dataset.cartcode, inp.value);
+});
+
+function changeQty(code, delta) {
+  const item = cart.find(i => i.code === code);
+  const med = allMedicines.find(m => m.code === code);
+  if (!item) return;
+  const newQty = Math.max(1, item.qty + delta);
+  if (med && newQty > med.stock) { showToast('Insufficient stock', true); return; }
+  item.qty = newQty;
+  item.amount = +(item.qty * item.rate).toFixed(2);
+  if (item.qty <= 0) cart = cart.filter(i => i.code !== code);
+  saveCart(); renderCart();
+}
+
+function setQty(code, val) {
+  const item = cart.find(i => i.code === code);
+  const med = allMedicines.find(m => m.code === code);
+  const q = parseInt(val);
+  if (!item || isNaN(q) || q < 1) return;
+  if (med && q > med.stock) { showToast('Insufficient stock', true); renderCart(); return; }
+  item.qty = q;
+  item.amount = +(item.qty * item.rate).toFixed(2);
+  saveCart(); renderCart();
+}
+
+function removeFromCart(code) {
+  cart = cart.filter(i => i.code !== code);
+  saveCart(); renderCart();
+}
+
+function renderCart() {
+  const el = document.getElementById('cartItems');
+  if (!cart.length) {
+    el.innerHTML = '<div class="cart-empty">Tap a medicine to add it</div>';
+    updatePosTotals(); return;
+  }
+  el.innerHTML = cart.map(i => `
+    <div class="cart-row" data-cartcode="${h(i.code)}">
+      <div><div class="cn">${h(i.name)}</div><div class="cs">${h(i.code)} · ${h(i.unit)} · PKR ${h(fmt(i.rate))}</div></div>
+      <div class="qty-ctrl">
+        <button class="qty-minus">−</button>
+        <input type="number" class="qty-input" data-cartcode="${h(i.code)}" value="${h(i.qty.toString())}" min="1" step="1"/>
+        <button class="qty-plus">+</button>
+      </div>
+      <div class="ca">PKR ${h(fmt(i.amount))}</div>
+      <button class="rm-btn" title="Remove">✕</button>
+    </div>`).join('');
+  updatePosTotals();
+}
+
+function updatePosTotals() {
+  const sub = cart.reduce((s, i) => s + i.amount, 0);
+  const disc = parseFloat(document.getElementById('posDiscount').value) || 0;
+  document.getElementById('posSubtotal').textContent = `PKR ${fmt(sub)}`;
+  document.getElementById('posTotal').textContent = `PKR ${fmt(Math.max(0, sub - disc))}`;
+}
+
+document.getElementById('posDiscount').addEventListener('input', updatePosTotals);
+
+document.getElementById('clearCartBtn').addEventListener('click', () => {
+  if (cart.length && !confirm('Clear the current cart?')) return;
+  clearCart();
+});
+
+document.getElementById('printCartBtn').addEventListener('click', () => {
+  if (!cart.length) { showToast('Cart is empty', true); return; }
+  const discount = parseFloat(document.getElementById('posDiscount').value) || 0;
+  const sub = cart.reduce((s, i) => s + i.amount, 0);
+  printReceipt({
+    id: 'DRAFT',
+    patientName: document.getElementById('patientName').value.trim() || 'Walk-in Patient',
+    patientCode: document.getElementById('patientCode').value.trim() || 'WALK-IN',
+    date: new Date().toISOString().slice(0, 10),
+    items: cart.map(i => ({ medicineName: i.name, qty: i.qty, rate: i.rate, amount: i.amount })),
+    discount,
+    totalAmount: Math.max(0, sub - discount)
+  });
+});
+
+document.getElementById('saveBillBtn').addEventListener('click', saveBill);
+
+function clearCart() {
+  cart = [];
+  document.getElementById('posDiscount').value = 0;
+  document.getElementById('patientName').value = '';
+  document.getElementById('patientCode').value = '';
+  saveCart(); renderCart();
+}
+
+async function saveBill() {
+  if (!cart.length) { showToast('Cart is empty', true); return; }
+  const patientName = document.getElementById('patientName').value.trim() || 'Walk-in Patient';
+  const patientCode = document.getElementById('patientCode').value.trim() || 'WALK-IN';
+  const discount = parseFloat(document.getElementById('posDiscount').value) || 0;
+  const sub = cart.reduce((s, i) => s + i.amount, 0);
+
+  if (discount > sub) { showToast('Discount cannot exceed subtotal', true); return; }
+
+  const bill = {
+    id: '', patientName, patientCode,
+    date: '', totalAmount: sub - discount, discount,
+    status: 'Pending',
+    items: cart.map(i => ({ medicineCode: i.code, medicineName: i.name, unit: i.unit, qty: i.qty, rate: i.rate, amount: i.amount }))
+  };
+
+  const btn = document.getElementById('saveBillBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await apiFetch('/Bills', { method: 'POST', body: JSON.stringify(bill) });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(`✅ ${data.id} saved!`, false, true);
+      allMedicines = [];
+      clearCart();
+      loadPosMedicines();
+    } else {
+      showToast(data.message || 'Failed to save bill', true);
+    }
+  } catch (e) {
+    if (e.message !== 'Session expired. Please login again.')
+      showToast('Network error — check server', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Bill';
+  }
+}
+
+// ── Cart persistence ───────────────────────────────
+function saveCart() { localStorage.setItem('nexffy_cart', JSON.stringify(cart)); }
+function loadCart() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('nexffy_cart') || '[]');
+    cart = Array.isArray(raw)
+      ? raw.filter(i => i && typeof i.code === 'string' && i.code.length > 0 && i.qty > 0 && i.rate > 0)
+      : [];
+  } catch { cart = []; }
+}
+
+// ── Medicines Page ─────────────────────────────────
+async function loadMedicines() {
+  const search = document.getElementById('medSearch')?.value || '';
+  const cat = document.getElementById('medCatFilter')?.value || '';
+  let url = `/Medicines?page=${medPage}&pageSize=${PAGE_SIZE}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  if (cat) url += `&category=${encodeURIComponent(cat)}`;
+  const tbody = document.getElementById('medTableBody');
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="9"><span class="spinner"></span>Loading…</td></tr>';
+  try {
+    const res = await apiFetch(url);
+    const { items: meds, total } = await res.json();
+    medTotal = total;
+    if (!meds.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:18px;color:var(--gray-400)">No medicines found</td></tr>';
+    } else {
+      tbody.innerHTML = meds.map(m => `
+        <tr>
+          <td style="font-weight:700;color:var(--primary)">${h(m.code)}</td>
+          <td><strong>${h(m.name)}</strong></td>
+          <td style="color:var(--gray-400)">${h(m.genericName)}</td>
+          <td><span class="badge badge-cat">${h(m.category)}</span></td>
+          <td>${h(m.unit)}</td>
+          <td>PKR ${h(fmt(m.price))}</td>
+          <td>${m.stock < 20 ? `<span class="badge badge-low">${h(m.stock.toString())}</span>` : h(m.stock.toString())}</td>
+          <td style="color:${isExpiringSoon(m.expiryDate) ? 'var(--danger)' : 'inherit'}">${h(m.expiryDate || '—')}</td>
+          <td>
+            <button class="btn btn-sm btn-primary" data-edit="${h(m.code)}">Edit</button>
+            <button class="btn btn-sm btn-danger" data-delete="${h(m.code)}">Del</button>
+          </td>
+        </tr>`).join('');
+    }
+    renderPagination('medPagination', medPage, total, p => { medPage = p; loadMedicines(); });
+  } catch (e) {
+    if (e.message !== 'Session expired. Please login again.') {
+      showToast('Cannot load medicines', true);
+      document.getElementById('medTableBody').innerHTML =
+        '<tr><td colspan="9" style="text-align:center;padding:18px;color:var(--danger)">Error loading medicines — check server</td></tr>';
+    }
+  }
+}
+
+// Event delegation for medicine table actions
+document.getElementById('medTableBody').addEventListener('click', async e => {
+  const editBtn = e.target.closest('[data-edit]');
+  const delBtn = e.target.closest('[data-delete]');
+  if (editBtn) openEditMedicine(editBtn.dataset.edit);
+  if (delBtn) deleteMedicine(delBtn.dataset.delete);
+});
+
+document.getElementById('medSearch').addEventListener('input', () => { medPage = 1; loadMedicines(); });
+document.getElementById('medCatFilter').addEventListener('change', () => { medPage = 1; loadMedicines(); });
+
+async function loadCategories() {
+  try {
+    const res = await apiFetch('/Medicines/categories');
+    const cats = await res.json();
+    ['medCatFilter', 'posCatFilter'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const cur = el.value;
+      el.innerHTML = '<option value="">All Categories</option>' + cats.map(c => `<option>${h(c)}</option>`).join('');
+      el.value = cur;
+    });
+    const dl = document.getElementById('catList');
+    if (dl) dl.innerHTML = cats.map(c => `<option value="${h(c)}">`).join('');
+  } catch {}
+}
+
+function isExpiringSoon(date) {
+  if (!date) return false;
+  return (new Date(date) - new Date()) / (1000 * 60 * 60 * 24) < 90;
+}
+
+function openAddMedicine() {
+  editingMedCode = null;
+  document.getElementById('medModalTitle').textContent = 'Add New Medicine';
+  document.getElementById('medSaveBtn').textContent = 'Save Medicine';
+  ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mUnit').value = 'Strip';
+  document.getElementById('mCode').disabled = false;
+  document.getElementById('medModal').classList.add('open');
+}
+
+async function openEditMedicine(code) {
+  try {
+    const res = await apiFetch(`/Medicines/${encodeURIComponent(code)}`);
+    if (!res.ok) { showToast('Medicine not found', true); return; }
+    const m = await res.json();
+    editingMedCode = code;
+    document.getElementById('medModalTitle').textContent = 'Edit Medicine';
+    document.getElementById('medSaveBtn').textContent = 'Update Medicine';
+    document.getElementById('mCode').value = m.code; document.getElementById('mCode').disabled = true;
+    document.getElementById('mName').value = m.name;
+    document.getElementById('mGeneric').value = m.genericName;
+    document.getElementById('mCategory').value = m.category;
+    document.getElementById('mUnit').value = m.unit;
+    document.getElementById('mPrice').value = m.price;
+    document.getElementById('mStock').value = m.stock;
+    document.getElementById('mExpiry').value = m.expiryDate || '';
+    document.getElementById('mManufacturer').value = m.manufacturer;
+    document.getElementById('medModal').classList.add('open');
+  } catch { showToast('Could not load medicine', true); }
+}
+
+document.getElementById('addMedBtn').addEventListener('click', openAddMedicine);
+document.getElementById('closeMedModalBtn').addEventListener('click', () => {
+  document.getElementById('medModal').classList.remove('open');
+  editingMedCode = null;
+  ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer']
+    .forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('mUnit').value = 'Strip';
+});
+
+document.getElementById('medSaveBtn').addEventListener('click', async () => {
+  const med = {
+    code: document.getElementById('mCode').value.trim(),
+    name: document.getElementById('mName').value.trim(),
+    genericName: document.getElementById('mGeneric').value.trim(),
+    category: document.getElementById('mCategory').value.trim(),
+    unit: document.getElementById('mUnit').value,
+    price: parseFloat(document.getElementById('mPrice').value) || 0,
+    stock: parseInt(document.getElementById('mStock').value) || 0,
+    expiryDate: document.getElementById('mExpiry').value || null,
+    manufacturer: document.getElementById('mManufacturer').value.trim()
+  };
+  if (!med.code || !med.name || !med.price) { showToast('Code, Name and Price are required', true); return; }
+  if (!/^[A-Za-z0-9]([A-Za-z0-9\-]{0,48}[A-Za-z0-9])?$/.test(med.code)) { showToast('Code must start/end with alphanumeric; hyphens allowed in the middle only', true); return; }
+
+  const url = editingMedCode ? `/Medicines/${encodeURIComponent(editingMedCode)}` : '/Medicines';
+  const method = editingMedCode ? 'PUT' : 'POST';
+  try {
+    const res = await apiFetch(url, { method, body: JSON.stringify(med) });
+    if (res.ok) {
+      showToast(editingMedCode ? 'Medicine updated' : 'Medicine added', false, true);
+      document.getElementById('medModal').classList.remove('open');
+      editingMedCode = null;
+      loadMedicines(); allMedicines = [];
+    } else {
+      const d = await res.json();
+      showToast(d.message || 'Error saving', true);
+    }
+  } catch { showToast('Network error', true); }
+});
+
+async function deleteMedicine(code) {
+  if (!confirm(`Remove ${code} from catalog? (Bill history is preserved)`)) return;
+  try {
+    const res = await apiFetch(`/Medicines/${encodeURIComponent(code)}`, { method: 'DELETE' });
+    if (res.ok) {
+      showToast('Medicine removed', false, true);
+      loadMedicines(); allMedicines = [];
+    } else {
+      showToast('Could not remove medicine', true);
+    }
+  } catch { showToast('Network error', true); }
+}
+
+// ── Bills Page ─────────────────────────────────────
+async function loadBills() {
+  const patient = document.getElementById('billPatient')?.value || '';
+  const date = document.getElementById('billDate')?.value || '';
+  let url = `/Bills?page=${billPage}&pageSize=${PAGE_SIZE}`;
+  if (patient) url += `&patient=${encodeURIComponent(patient)}`;
+  if (date) url += `&date=${date}`;
+  const tbody = document.getElementById('billTableBody');
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="8"><span class="spinner"></span>Loading…</td></tr>';
+  try {
+    const res = await apiFetch(url);
+    const { items: bills, total } = await res.json();
+    billTotal = total;
+    if (!bills.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--gray-400)">No bills found</td></tr>';
+    } else {
+      tbody.innerHTML = bills.map(b => `
+        <tr>
+          <td style="font-weight:700;color:var(--primary);cursor:pointer" data-view="${h(b.id)}">${h(b.id)}</td>
+          <td>${h(b.patientName)} <span style="color:var(--gray-400);font-size:.72rem">${h(b.patientCode)}</span></td>
+          <td>${h(b.date)}</td>
+          <td style="color:var(--gray-400)">${b.items.length} item${b.items.length !== 1 ? 's' : ''}</td>
+          <td><strong>PKR ${h(fmt(b.totalAmount))}</strong></td>
+          <td>${b.discount > 0 ? `PKR ${h(fmt(b.discount))}` : '—'}</td>
+          <td><span class="badge badge-${b.status === 'Cancelled' ? 'cancelled' : 'saved'}">${h(b.status)}</span></td>
+          <td>
+            <button class="btn btn-sm btn-ghost" data-view="${h(b.id)}">View</button>
+            <button class="btn btn-sm btn-primary" data-print="${h(b.id)}">Print</button>
+          </td>
+        </tr>`).join('');
+    }
+    renderPagination('billPagination', billPage, total, p => { billPage = p; loadBills(); });
+  } catch (e) {
+    if (e.message !== 'Session expired. Please login again.') {
+      showToast('Cannot load bills', true);
+      document.getElementById('billTableBody').innerHTML =
+        '<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--danger)">Error loading bills — check server</td></tr>';
+    }
+  }
+}
+
+document.getElementById('billTableBody').addEventListener('click', async e => {
+  const viewEl = e.target.closest('[data-view]');
+  const printEl = e.target.closest('[data-print]');
+  if (viewEl) viewBill(viewEl.dataset.view);
+  if (printEl) {
+    const res = await apiFetch(`/Bills/${encodeURIComponent(printEl.dataset.print)}`);
+    printReceipt(await res.json());
+  }
+});
+
+document.getElementById('billPatient').addEventListener('input', () => { billPage = 1; loadBills(); });
+document.getElementById('billDate').addEventListener('change', () => { billPage = 1; loadBills(); });
+document.getElementById('clearBillFilterBtn').addEventListener('click', () => {
+  document.getElementById('billPatient').value = '';
+  document.getElementById('billDate').value = '';
+  billPage = 1; loadBills();
+});
+
+async function viewBill(id) {
+  try {
+    const res = await apiFetch(`/Bills/${encodeURIComponent(id)}`);
+    const b = await res.json();
+    currentBill = b;
+    document.getElementById('billModalTitle').textContent = `Bill: ${h(b.id)}`;
+    const sub = b.items.reduce((s, i) => s + i.amount, 0);
+    document.getElementById('billModalBody').innerHTML = `
+      <div class="receipt-row"><span><strong>${h(b.id)}</strong></span><span>${h(b.date)}</span></div>
+      <div class="receipt-row"><span>Patient: ${h(b.patientName)}</span><span>Code: ${h(b.patientCode)}</span></div>
+      <hr/>
+      <table style="width:100%;font-size:.8rem">
+        <thead><tr><th style="text-align:left">Medicine</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+        <tbody>${b.items.map(i => `<tr>
+          <td>${h(i.medicineName)}</td>
+          <td style="text-align:center">${h(i.qty.toString())}</td>
+          <td style="text-align:right">PKR ${h(fmt(i.rate))}</td>
+          <td style="text-align:right">PKR ${h(fmt(i.amount))}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      <hr/>
+      <div class="receipt-row"><span>Subtotal</span><span>PKR ${h(fmt(sub))}</span></div>
+      ${b.discount > 0 ? `<div class="receipt-row"><span>Discount</span><span>PKR ${h(fmt(b.discount))}</span></div>` : ''}
+      <div class="receipt-row"><strong>Total</strong><strong>PKR ${h(fmt(b.totalAmount))}</strong></div>
+      ${b.notes ? `<div style="margin-top:8px;color:var(--gray-400);font-size:.78rem">Note: ${h(b.notes)}</div>` : ''}
+    `;
+    const cancelBtn = document.getElementById('cancelBillBtn');
+    cancelBtn.style.display = b.status === 'Cancelled' ? 'none' : '';
+    document.getElementById('billModal').classList.add('open');
+  } catch { showToast('Could not load bill', true); }
+}
+
+document.getElementById('closeBillModalBtn').addEventListener('click', () => {
+  document.getElementById('billModal').classList.remove('open');
+  currentBill = null;
+});
+
+document.getElementById('cancelBillBtn').addEventListener('click', async () => {
+  if (!currentBill) return;
+  const reason = prompt(`Reason for cancelling ${currentBill.id}:`);
+  if (reason === null) return;
+  try {
+    const res = await apiFetch(`/Bills/${encodeURIComponent(currentBill.id)}/cancel`, {
+      method: 'PUT',
+      body: JSON.stringify({ reason: reason || 'No reason given' })
+    });
+    const d = await res.json();
+    if (res.ok) {
+      showToast('Bill cancelled & stock restored', false, true);
+      document.getElementById('billModal').classList.remove('open');
+      currentBill = null;
+      allMedicines = [];
+      loadBills();
+    } else {
+      showToast(d.message || 'Failed to cancel', true);
+    }
+  } catch { showToast('Network error', true); }
+});
+
+document.getElementById('printBillBtn').addEventListener('click', () => {
+  if (currentBill) printReceipt(currentBill);
+});
+
+function printReceipt(b) {
+  const sub = b.items.reduce((s, i) => s + i.amount, 0);
+  const w = window.open('', '_blank', 'width=350,height=650');
+  if (!w) { showToast('Allow popups to print', true); return; }
+  const e = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  w.document.write(`<!DOCTYPE html><html><head><title>Receipt ${e(b.id)}</title><style>
+    body{font-family:monospace;font-size:11px;padding:10px;max-width:280px}
+    h2,h3{text-align:center;margin:4px 0}
+    hr{border:none;border-top:1px dashed #000;margin:6px 0}
+    .row{display:flex;justify-content:space-between}
+    table{width:100%;border-collapse:collapse}
+    td,th{padding:2px 4px;font-size:10px}
+    th{border-bottom:1px solid #000}
+    .total{font-weight:bold}
+  </style></head><body>
+    <h2>NEXFFY PHARMACY</h2>
+    <h3>Sales Receipt</h3>
+    <hr/>
+    <div class="row"><span>Bill:</span><span>${e(b.id)}</span></div>
+    <div class="row"><span>Date:</span><span>${e(b.date)}</span></div>
+    <div class="row"><span>Patient:</span><span>${e(b.patientName)}</span></div>
+    <div class="row"><span>Code:</span><span>${e(b.patientCode)}</span></div>
+    <hr/>
+    <table>
+      <thead><tr><th style="text-align:left">Item</th><th>Qty</th><th>Rate</th><th>Amt</th></tr></thead>
+      <tbody>${b.items.map(i => `<tr>
+        <td>${e(i.medicineName)}</td>
+        <td style="text-align:center">${e(i.qty)}</td>
+        <td style="text-align:right">${Number(i.rate).toFixed(2)}</td>
+        <td style="text-align:right">${Number(i.amount).toFixed(2)}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+    <hr/>
+    <div class="row"><span>Subtotal:</span><span>PKR ${sub.toFixed(2)}</span></div>
+    ${b.discount > 0 ? `<div class="row"><span>Discount:</span><span>PKR ${Number(b.discount).toFixed(2)}</span></div>` : ''}
+    <div class="row total"><span>TOTAL:</span><span>PKR ${Number(b.totalAmount).toFixed(2)}</span></div>
+    <hr/>
+    <p style="text-align:center;font-size:9px">Thank you for your purchase<br/>Nexffy Pharmacy POS</p>
+  </body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+  w.close();
+}
+
+// ── Category Management ────────────────────────────
+async function loadCategoryMgmt() {
+  const el = document.getElementById('catMgmtList');
+  el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--gray-400);font-size:.84rem"><span class="spinner"></span> Loading…</div>';
+  try {
+    const res = await apiFetch('/Categories');
+    const cats = await res.json();
+    if (!cats.length) {
+      el.innerHTML = '<p style="text-align:center;color:var(--gray-400);padding:16px 0;font-size:.84rem">No standalone categories yet — add one above or they appear from medicine records automatically.</p>';
+      return;
+    }
+    el.innerHTML = `<p style="font-size:.75rem;color:var(--gray-400);padding:6px 4px 10px;border-bottom:1px solid var(--gray-100);margin-bottom:4px">
+        Categories in use by medicines cannot be removed. Only unused ones can be deleted.
+      </p>` + cats.map(c => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--gray-100)">
+        <div>
+          <span style="font-size:.86rem;font-weight:600">${h(c.name)}</span>
+          <span style="font-size:.72rem;color:var(--gray-400);margin-left:8px">${c.medicineCount > 0 ? c.medicineCount + ' medicine' + (c.medicineCount !== 1 ? 's' : '') : 'unused'}</span>
+        </div>
+        ${c.medicineCount === 0
+          ? `<button class="btn btn-sm btn-danger" data-delcat="${h(c.name)}">Remove</button>`
+          : `<span style="font-size:.7rem;background:var(--gray-100);color:var(--gray-400);padding:3px 8px;border-radius:4px">in use</span>`}
+      </div>`).join('');
+  } catch { showToast('Cannot load categories', true); }
+}
+
+document.getElementById('catMgmtList').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-delcat]');
+  if (!btn) return;
+  const name = btn.dataset.delcat;
+  try {
+    const res = await apiFetch('/Categories/' + encodeURIComponent(name), { method: 'DELETE' });
+    if (res.ok) {
+      showToast('Category removed', false, true);
+      loadCategoryMgmt();
+      loadCategories();
+    } else {
+      const d = await res.json();
+      showToast(d.message || 'Cannot remove', true);
+    }
+  } catch { showToast('Network error', true); }
+});
+
+async function addCategory() {
+  const input = document.getElementById('newCatInput');
+  const name = input.value.trim();
+  if (!name) { showToast('Enter a category name', true); return; }
+  try {
+    const res = await apiFetch('/Categories', { method: 'POST', body: JSON.stringify({ name }) });
+    const d = await res.json();
+    if (res.ok) {
+      showToast('"' + h(name) + '" added', false, true);
+      input.value = '';
+      loadCategoryMgmt();
+      loadCategories();
+    } else {
+      showToast(d.message || 'Cannot add category', true);
+    }
+  } catch { showToast('Network error', true); }
+}
+
+document.getElementById('addCatBtn').addEventListener('click', addCategory);
+document.getElementById('newCatInput').addEventListener('keydown', e => { if (e.key === 'Enter') addCategory(); });
+document.getElementById('manageCatBtn').addEventListener('click', () => {
+  document.getElementById('newCatInput').value = '';
+  document.getElementById('catMgmtModal').classList.add('open');
+  loadCategoryMgmt();
+});
+document.getElementById('closeCatMgmtBtn').addEventListener('click', () => {
+  document.getElementById('catMgmtModal').classList.remove('open');
+  document.getElementById('newCatInput').value = '';
+});
+
+// ── Change Password ────────────────────────────────
+document.getElementById('changePassBtn').addEventListener('click', () => {
+  ['cpCurrent','cpNew','cpConfirm'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('passModalErr').textContent = '';
+  document.getElementById('passModal').classList.add('open');
+  setTimeout(() => document.getElementById('cpCurrent').focus(), 50);
+});
+document.getElementById('closePassModalBtn').addEventListener('click', () => {
+  document.getElementById('passModal').classList.remove('open');
+});
+document.getElementById('savePassBtn').addEventListener('click', async () => {
+  const current = document.getElementById('cpCurrent').value;
+  const newPass  = document.getElementById('cpNew').value;
+  const confirm  = document.getElementById('cpConfirm').value;
+  const errEl    = document.getElementById('passModalErr');
+  errEl.textContent = '';
+  if (!current || !newPass || !confirm) { errEl.textContent = 'All fields are required'; return; }
+  if (newPass.length < 8)              { errEl.textContent = 'New password must be at least 8 characters'; return; }
+  if (newPass !== confirm)             { errEl.textContent = 'Passwords do not match'; return; }
+  const btn = document.getElementById('savePassBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await apiFetch('/Auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword: current, newPassword: newPass })
+    });
+    const d = await res.json();
+    if (res.ok) {
+      showToast('Password changed successfully', false, true);
+      document.getElementById('passModal').classList.remove('open');
+    } else {
+      errEl.textContent = d.message || 'Failed to change password';
+    }
+  } catch { errEl.textContent = 'Network error'; }
+  finally { btn.disabled = false; btn.textContent = 'Change Password'; }
+});
+
+// ── Pagination ─────────────────────────────────────
+function renderPagination(containerId, currentPage, total, onPageChange) {
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const el = document.getElementById(containerId);
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <button class="btn btn-sm btn-ghost" ${currentPage === 1 ? 'disabled' : ''} data-dir="prev">← Prev</button>
+    <span>Page ${currentPage} of ${totalPages} (${total} total)</span>
+    <button class="btn btn-sm btn-ghost" ${currentPage === totalPages ? 'disabled' : ''} data-dir="next">Next →</button>
+  `;
+  el.querySelectorAll('[data-dir]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      onPageChange(btn.dataset.dir === 'prev' ? currentPage - 1 : currentPage + 1);
+    })
+  );
+}
+
+// ── Helpers ────────────────────────────────────────
+function fmt(n) {
+  return Number(n).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function showToast(msg, isErr = false, isOk = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = isErr ? 'err show' : isOk ? 'ok show' : 'show';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => { t.className = ''; }, 3000);
+}
+
+// ── Init ───────────────────────────────────────────
+function initApp() {
+  loadCart();
+  renderCart();
+  loadDashboard();
+  loadCategories();
+}
+
+// Boot: check for existing session via HttpOnly cookie
+document.getElementById('loginPass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+document.getElementById('loginUser').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('loginPass').focus();
+});
+(async () => {
+  try {
+    const res = await fetch(API + '/Auth/me', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('userBadge').textContent = data.username || 'admin';
+      document.getElementById('userInitial').textContent = (data.username || 'admin')[0].toUpperCase();
+      hideLogin();
+      initApp();
+    } else {
+      showLogin();
+    }
+  } catch {
+    showLogin();
+    document.getElementById('loginError').textContent = 'Cannot reach server — is it running on port 5200?';
+  }
+})();
+</script>
+</body>
+</html>

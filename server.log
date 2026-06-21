@@ -1,0 +1,162 @@
+Using launch settings from D:\Project\Nexffy\Properties\launchSettings.json...
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (10ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT 1
+NexffyDB ready.
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (37ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      
+      IF EXISTS
+          (SELECT *
+           FROM [sys].[objects] o
+           WHERE [o].[type] = 'U'
+           AND [o].[is_ms_shipped] = 0
+           AND NOT EXISTS (SELECT *
+               FROM [sys].[extended_properties] AS [ep]
+               WHERE [ep].[major_id] = [o].[object_id]
+                   AND [ep].[minor_id] = 0
+                   AND [ep].[class] = 1
+                   AND [ep].[name] = N'microsoft_database_tools_support'
+          )
+      )
+      SELECT 1 ELSE SELECT 0
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://0.0.0.0:5200
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\Project\Nexffy
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (15ms) [Parameters=[@__today_0='?' (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SELECT [b].[Id], [b].[Date], [b].[Discount], [b].[PatientCode], [b].[PatientName], [b].[Status], [b].[TotalAmount]
+      FROM [Bills] AS [b]
+      WHERE [b].[Date] = @__today_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Bills] AS [b]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Medicines] AS [m]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Medicines] AS [m]
+      WHERE [m].[Stock] < 20
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COALESCE(SUM([b].[TotalAmount]), 0.0)
+      FROM [Bills] AS [b]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@__p_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(@__p_0) [b].[MedicineName], COALESCE(SUM([b].[Qty]), 0.0) AS [TotalQty]
+      FROM [BillItems] AS [b]
+      GROUP BY [b].[MedicineCode], [b].[MedicineName]
+      ORDER BY COALESCE(SUM([b].[Qty]), 0.0) DESC
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__p_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(@__p_0) [b].[Id], [b].[PatientName], [b].[Date], [b].[TotalAmount], [b].[Status]
+      FROM [Bills] AS [b]
+      ORDER BY [b].[Date] DESC
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@__today_0='?' (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SELECT [b].[Id], [b].[Date], [b].[Discount], [b].[PatientCode], [b].[PatientName], [b].[Status], [b].[TotalAmount]
+      FROM [Bills] AS [b]
+      WHERE [b].[Date] = @__today_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Bills] AS [b]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Medicines] AS [m]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Medicines] AS [m]
+      WHERE [m].[Stock] < 20
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COALESCE(SUM([b].[TotalAmount]), 0.0)
+      FROM [Bills] AS [b]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@__p_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(@__p_0) [b].[MedicineName], COALESCE(SUM([b].[Qty]), 0.0) AS [TotalQty]
+      FROM [BillItems] AS [b]
+      GROUP BY [b].[MedicineCode], [b].[MedicineName]
+      ORDER BY COALESCE(SUM([b].[Qty]), 0.0) DESC
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__p_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(@__p_0) [b].[Id], [b].[PatientName], [b].[Date], [b].[TotalAmount], [b].[Status]
+      FROM [Bills] AS [b]
+      ORDER BY [b].[Date] DESC
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__today_0='?' (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SELECT [b].[Id], [b].[Date], [b].[Discount], [b].[PatientCode], [b].[PatientName], [b].[Status], [b].[TotalAmount]
+      FROM [Bills] AS [b]
+      WHERE [b].[Date] = @__today_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Bills] AS [b]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Medicines] AS [m]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Medicines] AS [m]
+      WHERE [m].[Stock] < 20
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COALESCE(SUM([b].[TotalAmount]), 0.0)
+      FROM [Bills] AS [b]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(@__p_0) [b].[MedicineName], COALESCE(SUM([b].[Qty]), 0.0) AS [TotalQty]
+      FROM [BillItems] AS [b]
+      GROUP BY [b].[MedicineCode], [b].[MedicineName]
+      ORDER BY COALESCE(SUM([b].[Qty]), 0.0) DESC
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(@__p_0) [b].[Id], [b].[PatientName], [b].[Date], [b].[TotalAmount], [b].[Status]
+      FROM [Bills] AS [b]
+      ORDER BY [b].[Date] DESC
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@__today_0='?' (Size = 4000)], CommandType='Text', CommandTimeout='30']
+      SELECT [b].[Id], [b].[Date], [b].[Discount], [b].[PatientCode], [b].[PatientName], [b].[Status], [b].[TotalAmount]
+      FROM [Bills] AS [b]
+      WHERE [b].[Date] = @__today_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Bills] AS [b]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Medicines] AS [m]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Medicines] AS [m]
+      WHERE [m].[Stock] < 20
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COALESCE(SUM([b].[TotalAmount]), 0.0)
+      FROM [Bills] AS [b]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@__p_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(@__p_0) [b].[MedicineName], COALESCE(SUM([b].[Qty]), 0.0) AS [TotalQty]
+      FROM [BillItems] AS [b]
+      GROUP BY [b].[MedicineCode], [b].[MedicineName]
+      ORDER BY COALESCE(SUM([b].[Qty]), 0.0) DESC
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__p_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(@__p_0) [b].[Id], [b].[PatientName], [b].[Date], [b].[TotalAmount], [b].[Status]
+      FROM [Bills] AS [b]
+      ORDER BY [b].[Date] DESC
