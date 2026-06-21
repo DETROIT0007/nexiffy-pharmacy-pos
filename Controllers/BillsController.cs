@@ -102,12 +102,6 @@ namespace Nexffy.Controllers
                 bill.Date = DateTime.Now.ToString("yyyy-MM-dd");
                 bill.Status = BillStatus.Saved;
 
-                var subtotal = bill.Items.Sum(i => i.Amount);
-                if (bill.Discount < 0 || bill.Discount > subtotal)
-                    return BadRequest(new { message = "Discount cannot exceed subtotal" });
-
-                bill.TotalAmount = subtotal - bill.Discount;
-
                 foreach (var item in bill.Items)
                 {
                     var med = await _context.Medicines
@@ -116,6 +110,10 @@ namespace Nexffy.Controllers
                     if (med == null)
                         return BadRequest(new { message = $"Medicine '{item.MedicineCode}' not found" });
 
+                    // Override client-supplied rate and amount with server-authoritative values
+                    item.Rate   = med.Price;
+                    item.Amount = Math.Round(item.Rate * item.Qty, 2);
+
                     var deduct = (int)item.Qty;
                     if (med.Stock < deduct)
                         return BadRequest(new { message = $"Insufficient stock for {med.Name}. Available: {med.Stock}" });
@@ -123,6 +121,13 @@ namespace Nexffy.Controllers
                     med.Stock -= deduct;
                     med.LastUpdated = DateTime.Now;
                 }
+
+                // Subtotal computed after server-side rate/amount correction
+                var subtotal = bill.Items.Sum(i => i.Amount);
+                if (bill.Discount < 0 || bill.Discount > subtotal)
+                    return BadRequest(new { message = "Discount cannot exceed subtotal" });
+
+                bill.TotalAmount = subtotal - bill.Discount;
 
                 _context.Bills.Add(bill);
                 await _context.SaveChangesAsync();

@@ -142,6 +142,7 @@ namespace Nexffy.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 50)
         {
+            if (threshold < 1 || threshold > 1000) threshold = 20;
             if (page < 1) page = 1;
             if (page > 100000) page = 100000;
             if (pageSize < 1 || pageSize > 100) pageSize = 50;
