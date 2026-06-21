@@ -1,48 +1,125 @@
 'use strict';
-const CACHE = 'nexffy-v1';
 
-// On install: pre-cache the SPA shell
+const SHELL = 'nexffy-shell-v2';
+const DATA  = 'nexffy-data-v2';
+
+const SHELL_FILES = ['/', '/manifest.json', '/icon.svg'];
+
+// ── Empty offline shapes so the app JS never crashes on undefined ──
+const OFFLINE_AUTH     = { username: null };
+const OFFLINE_MEDS     = { items: [], total: 0, page: 1, pageSize: 500 };
+const OFFLINE_DASH     = {
+  offline: true,
+  period: 'today', startDate: '', today: '',
+  periodSales: 0, periodBillCount: 0,
+  totalRevenue: 0, totalMedicines: 0, lowStock: 0, totalBills: 0, inventoryValue: 0,
+  dailyRevenue: [], salesByCategory: [], savedCount: 0, cancelledCount: 0,
+  expiryCalendar: [], topMedicines: [], recentBills: [], expiringMeds: []
+};
+const OFFLINE_LIST     = { items: [], total: 0, page: 1, pageSize: 20 };
+const OFFLINE_CATS     = [];
+
+// ── Install: pre-cache the app shell ─────────────
 self.addEventListener('install', e =>
   e.waitUntil(
-    caches.open(CACHE)
-      .then(c => c.add('/'))
+    caches.open(SHELL)
+      .then(c => c.addAll(SHELL_FILES))
       .then(() => self.skipWaiting())
   )
 );
 
-// On activate: evict old cache versions
+// ── Activate: evict old caches ────────────────────
 self.addEventListener('activate', e =>
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(
+        keys.filter(k => k !== SHELL && k !== DATA).map(k => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   )
 );
 
-// Fetch strategy:
-//  - API calls  → network only (app JS handles offline fallback)
-//  - Everything else → network-first, fall back to cache, fall back to index.html
+// ── Fetch: per-route caching strategy ────────────
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
-  const url = new URL(e.request.url);
-  if (url.pathname.startsWith('/api/')) return;
+  const { pathname, search } = new URL(e.request.url);
 
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      })
-      .catch(() =>
-        caches.match(e.request)
-          .then(cached => cached || caches.match('/'))
-      )
-  );
+  // ── App shell (HTML/CSS/JS/icons) → cache-first ─
+  if (!pathname.startsWith('/api/')) {
+    e.respondWith(
+      caches.open(SHELL)
+        .then(c => c.match(e.request))
+        .then(hit => hit || fetch(e.request).then(r => updateCache(SHELL, e.request, r)))
+        .catch(() => caches.match('/'))
+    );
+    return;
+  }
+
+  // ── Auth/me → network-first, cache fallback ──────
+  // Cached so the user stays "logged in" offline between app restarts.
+  if (pathname === '/api/Auth/me') {
+    e.respondWith(networkFirst(e.request, DATA, OFFLINE_AUTH, 200));
+    return;
+  }
+
+  // ── Medicine catalog → network-first, cache fallback ─
+  if (pathname.startsWith('/api/Medicines')) {
+    const shape = search.includes('pageSize=500') ? OFFLINE_MEDS :
+                  search.includes('low-stock')     ? OFFLINE_MEDS : OFFLINE_MEDS;
+    if (pathname.endsWith('/categories'))
+      e.respondWith(networkFirst(e.request, DATA, OFFLINE_CATS, 200));
+    else
+      e.respondWith(networkFirst(e.request, DATA, shape, 200));
+    return;
+  }
+
+  // ── Dashboard → network-first, stale-ok ──────────
+  if (pathname.startsWith('/api/Dashboard')) {
+    e.respondWith(networkFirst(e.request, DATA, OFFLINE_DASH, 200));
+    return;
+  }
+
+  // ── Categories → network-first ────────────────────
+  if (pathname.startsWith('/api/Categories')) {
+    e.respondWith(networkFirst(e.request, DATA, OFFLINE_CATS, 200));
+    return;
+  }
+
+  // ── Bills list (read) → network-first ────────────
+  if (pathname.startsWith('/api/Bills') && !pathname.includes('/cancel')) {
+    e.respondWith(networkFirst(e.request, DATA, OFFLINE_LIST, 200));
+    return;
+  }
+
+  // ── Everything else → network only (Health, etc.) ─
 });
 
-// When the app tells us to sync pending bills, notify all open tabs
+// ── Helpers ───────────────────────────────────────
+
+async function updateCache(name, req, res) {
+  if (res && res.ok) {
+    const c = await caches.open(name);
+    c.put(req, res.clone());
+  }
+  return res;
+}
+
+async function networkFirst(req, cacheName, offlineShape, offlineStatus) {
+  try {
+    const res = await fetch(req);
+    if (res.ok) updateCache(cacheName, req, res);
+    return res;
+  } catch {
+    const cached = await caches.match(req);
+    if (cached) return cached;
+    return new Response(JSON.stringify(offlineShape), {
+      status: offlineStatus,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
 self.addEventListener('message', e => {
   if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });

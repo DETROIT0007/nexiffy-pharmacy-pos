@@ -5,6 +5,13 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Nexffy — Pharmacy POS</title>
+  <link rel="manifest" href="/manifest.json"/>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml"/>
+  <meta name="theme-color" content="#2563eb"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Nexffy POS"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -297,6 +304,21 @@
     /* ── Chart / Status blocks ───────────────────── */
     .chart-empty{text-align:center;color:var(--gray-400);padding:24px;font-size:.83rem}
 
+    /* ── Install banner ─────────────────────────── */
+    #installBanner{
+      display:none;position:fixed;bottom:0;left:0;right:0;z-index:8000;
+      background:var(--primary);color:#fff;
+      padding:12px 20px;display:none;align-items:center;gap:14px;
+      box-shadow:0 -4px 16px rgba(0,0,0,.2);
+    }
+    #installBanner.show{display:flex}
+    #installBanner .ib-text{flex:1;font-size:.88rem}
+    #installBanner .ib-text strong{display:block;font-weight:700;margin-bottom:2px}
+    #installBanner .ib-text span{opacity:.85;font-size:.8rem}
+    .btn-install{background:#fff;color:var(--primary);font-weight:700;border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:.84rem}
+    .btn-install:hover{background:var(--primary-subtle)}
+    .btn-ib-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:1.2rem;cursor:pointer;padding:4px 8px;line-height:1}
+
     /* ── Offline / Sync ──────────────────────────── */
     #offlinePill{display:none;background:var(--danger-light);color:var(--danger);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:700;border:1.5px solid #fca5a5}
     #syncPendingBtn{display:none;background:var(--warning-light);color:var(--warning);border:1.5px solid #fde68a;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;cursor:pointer;animation:pulse 2s infinite}
@@ -316,6 +338,17 @@
   </style>
 </head>
 <body>
+
+<!-- ── Install Banner ────────────────────────────── -->
+<div id="installBanner">
+  <div style="font-size:1.8rem">💊</div>
+  <div class="ib-text">
+    <strong>Install Nexffy POS</strong>
+    <span>Add to desktop for instant offline access — no browser needed</span>
+  </div>
+  <button class="btn-install" id="installBtn">Install App</button>
+  <button class="btn-ib-close" id="dismissInstallBtn" title="Dismiss">✕</button>
+</div>
 
 <!-- ── Login Screen ─────────────────────────────── -->
 <div id="loginScreen">
@@ -1718,12 +1751,46 @@ function initApp() {
   if (!navigator.onLine) document.getElementById('offlinePill').style.display = '';
 }
 
-// ── Service Worker registration ────────────────────
+// ── Service Worker ────────────────────────────────
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register('/sw.js')
+    .then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const w = reg.installing;
+        w.addEventListener('statechange', () => {
+          if (w.state === 'installed' && navigator.serviceWorker.controller)
+            showToast('App updated — reload to get the latest version');
+        });
+      });
+    })
+    .catch(() => {});
 }
 
-// ── Boot: check for existing session via HttpOnly cookie ──
+// ── PWA install prompt ────────────────────────────
+let _installEvent = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installEvent = e;
+  if (!localStorage.getItem('nexffy_install_dismissed'))
+    document.getElementById('installBanner').classList.add('show');
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!_installEvent) return;
+  _installEvent.prompt();
+  const { outcome } = await _installEvent.userChoice;
+  if (outcome === 'accepted') document.getElementById('installBanner').classList.remove('show');
+  _installEvent = null;
+});
+document.getElementById('dismissInstallBtn').addEventListener('click', () => {
+  document.getElementById('installBanner').classList.remove('show');
+  localStorage.setItem('nexffy_install_dismissed', '1');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').classList.remove('show');
+  showToast('Nexffy POS installed successfully!', false, true);
+});
+
+// ── Boot ──────────────────────────────────────────
 document.getElementById('loginPass').addEventListener('keydown', e => {
   if (e.key === 'Enter') login();
 });
@@ -1733,18 +1800,26 @@ document.getElementById('loginUser').addEventListener('keydown', e => {
 (async () => {
   try {
     const res = await fetch(API + '/Auth/me', { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      document.getElementById('userBadge').textContent = data.username || 'admin';
-      document.getElementById('userInitial').textContent = (data.username || 'admin')[0].toUpperCase();
+    const data = await res.json();
+    if (res.ok && data.username) {
+      // Authenticated — either live from server or cached by SW
+      document.getElementById('userBadge').textContent = data.username;
+      document.getElementById('userInitial').textContent = data.username[0].toUpperCase();
       hideLogin();
       initApp();
+      // Offline session (SW served cached response, server unreachable)
+      if (data.username && !navigator.onLine)
+        showToast('Running offline — bills will sync when server is back');
     } else {
       showLogin();
     }
   } catch {
+    // No cached session and server unreachable
     showLogin();
-    document.getElementById('loginError').textContent = 'Cannot reach server — is it running on port 5200?';
+    document.getElementById('loginError').textContent =
+      navigator.onLine
+        ? 'Cannot reach server — is it running on port 5200?'
+        : 'Offline and no cached session. Connect to the server once to enable offline mode.';
   }
 })();
 </script>
