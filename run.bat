@@ -1,9 +1,10 @@
 @echo off
-title Nexffy Pharmacy POS
+title Nexiffy Pharmacy POS
 cd /d "%~dp0"
+set ASPNETCORE_ENVIRONMENT=Development
 echo.
 echo  ============================================
-echo   Nexffy Pharmacy POS  -  http://localhost:5200
+echo   Nexiffy Pharmacy POS  -  http://localhost:5200
 echo  ============================================
 echo.
 echo  Starting server... (close this window to stop)

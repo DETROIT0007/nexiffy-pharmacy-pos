@@ -1,6 +1,6 @@
 {
-  "name": "Nexffy Pharmacy POS",
-  "short_name": "Nexffy POS",
+  "name": "Nexiffy Pharmacy POS",
+  "short_name": "Nexiffy POS",
   "description": "Offline-capable pharmacy point of sale system",
   "start_url": "/",
   "display": "standalone",

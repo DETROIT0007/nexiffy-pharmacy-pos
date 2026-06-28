@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Nexffy.Data;
+using Nexiffy.Data;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -11,13 +11,13 @@ using System.Threading.RateLimiting;
 
 // ── JWT Secret — stored in OS data directory, never in source ───────
 // On first run a cryptographically random key is generated and written to
-// %PROGRAMDATA%\Nexffy\jwt.key so it persists across restarts without
+// %PROGRAMDATA%\Nexiffy\jwt.key so it persists across restarts without
 // ever appearing in appsettings.json or source control.
 static string GetOrCreateJwtSecret()
 {
     var keyPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-        "Nexffy", "jwt.key");
+        "Nexiffy", "jwt.key");
 
     if (File.Exists(keyPath))
     {
@@ -30,7 +30,21 @@ static string GetOrCreateJwtSecret()
     var secret = Convert.ToBase64String(bytes);
     Directory.CreateDirectory(Path.GetDirectoryName(keyPath)!);
     File.WriteAllText(keyPath, secret);
-    Console.WriteLine($"[Nexffy] JWT secret generated → {keyPath}");
+
+    // Lock down the key file to the current user only (Windows)
+    if (OperatingSystem.IsWindows())
+    {
+        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "icacls",
+            Arguments = $"\"{keyPath}\" /inheritance:r /grant:r \"{Environment.UserDomainName}\\{Environment.UserName}:(F)\"",
+            CreateNoWindow = true,
+            UseShellExecute = false
+        });
+        p?.WaitForExit(3000);
+    }
+
+    Console.WriteLine($"[Nexiffy] JWT secret generated → {keyPath}");
     return secret;
 }
 
@@ -53,16 +67,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateIssuer = true,
-            ValidIssuer = "nexffy-pharmacy",
+            ValidIssuer = "nexiffy-pharmacy",
             ValidateAudience = true,
-            ValidAudience = "nexffy-pos",
+            ValidAudience = "nexiffy-pos",
             ClockSkew = TimeSpan.Zero
         };
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = ctx =>
             {
-                var cookie = ctx.Request.Cookies["nexffy_auth"];
+                var cookie = ctx.Request.Cookies["nexiffy_auth"];
                 if (!string.IsNullOrEmpty(cookie)) ctx.Token = cookie;
                 return Task.CompletedTask;
             },
@@ -156,17 +170,50 @@ using (var scope = app.Services.CreateScope())
             app.Configuration.GetValue<bool>("Dev:ResetDbOnStart"))
         {
             context.Database.EnsureDeleted();
-            Console.WriteLine("[Nexffy] Dev: DB wiped per Dev:ResetDbOnStart flag.");
+            Console.WriteLine("[Nexiffy] Dev: DB wiped per Dev:ResetDbOnStart flag.");
         }
         context.Database.EnsureCreated();
+
+        // Create RevokedTokens table if the DB was created before this table was added
+        await context.Database.ExecuteSqlRawAsync(@"
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'RevokedTokens')
+            BEGIN
+                CREATE TABLE [RevokedTokens] (
+                    [Jti] NVARCHAR(200) NOT NULL,
+                    [ExpiresAt] DATETIME2 NOT NULL,
+                    CONSTRAINT [PK_RevokedTokens] PRIMARY KEY ([Jti])
+                );
+                CREATE INDEX [IX_RevokedTokens_ExpiresAt] ON [RevokedTokens] ([ExpiresAt]);
+            END");
+
+        // Seed 10 sample medicines if no active (non-deleted) medicines exist
+        if (!context.Medicines.IgnoreQueryFilters().Any(m => !m.IsDeleted))
+        {
+            var today = DateTime.Now;
+            context.Medicines.AddRange(new[]
+            {
+                new Nexiffy.Models.Medicine { Code="MED-001", Name="Panadol 500mg",       GenericName="Paracetamol",       Category="Painkiller",   Unit="Strip",  Price=35m,   Stock=120, ExpiryDate=today.AddMonths(18).ToString("yyyy-MM-dd"), Manufacturer="GSK",          LastUpdated=today },
+                new Nexiffy.Models.Medicine { Code="MED-002", Name="Brufen 400mg",        GenericName="Ibuprofen",         Category="Painkiller",   Unit="Strip",  Price=45m,   Stock=80,  ExpiryDate=today.AddMonths(14).ToString("yyyy-MM-dd"), Manufacturer="Abbott",       LastUpdated=today },
+                new Nexiffy.Models.Medicine { Code="MED-003", Name="Augmentin 625mg",     GenericName="Amoxicillin+CA",    Category="Antibiotic",   Unit="Strip",  Price=320m,  Stock=5,   ExpiryDate=today.AddMonths(10).ToString("yyyy-MM-dd"), Manufacturer="GSK",          LastUpdated=today },
+                new Nexiffy.Models.Medicine { Code="MED-004", Name="Nexium 40mg",         GenericName="Esomeprazole",      Category="Antacid",      Unit="Strip",  Price=280m,  Stock=42,  ExpiryDate=today.AddMonths(20).ToString("yyyy-MM-dd"), Manufacturer="AstraZeneca",  LastUpdated=today },
+                new Nexiffy.Models.Medicine { Code="MED-005", Name="Metformin 500mg",     GenericName="Metformin HCl",     Category="Diabetes",     Unit="Strip",  Price=60m,   Stock=200, ExpiryDate=today.AddMonths(24).ToString("yyyy-MM-dd"), Manufacturer="Getz Pharma",  LastUpdated=today },
+                new Nexiffy.Models.Medicine { Code="MED-006", Name="Amlodipine 5mg",      GenericName="Amlodipine",        Category="Cardiac",      Unit="Strip",  Price=55m,   Stock=8,   ExpiryDate=today.AddDays(25).ToString("yyyy-MM-dd"),   Manufacturer="Pfizer",       LastUpdated=today },
+                new Nexiffy.Models.Medicine { Code="MED-007", Name="Atorvastatin 20mg",   GenericName="Atorvastatin",      Category="Cardiac",      Unit="Strip",  Price=140m,  Stock=60,  ExpiryDate=today.AddMonths(16).ToString("yyyy-MM-dd"), Manufacturer="Searle",       LastUpdated=today },
+                new Nexiffy.Models.Medicine { Code="MED-008", Name="ORS Sachet",          GenericName="Oral Rehydration",  Category="Gastro",       Unit="Sachet", Price=12m,   Stock=3,   ExpiryDate=today.AddMonths(12).ToString("yyyy-MM-dd"), Manufacturer="Otsuka",       LastUpdated=today },
+                new Nexiffy.Models.Medicine { Code="MED-009", Name="Ventolin Inhaler",    GenericName="Salbutamol",        Category="Respiratory",  Unit="Bottle", Price=380m,  Stock=15,  ExpiryDate=today.AddMonths(22).ToString("yyyy-MM-dd"), Manufacturer="GSK",          LastUpdated=today },
+                new Nexiffy.Models.Medicine { Code="MED-010", Name="Vitamin C 500mg",     GenericName="Ascorbic Acid",     Category="Supplement",   Unit="Strip",  Price=25m,   Stock=150, ExpiryDate=today.AddDays(18).ToString("yyyy-MM-dd"),   Manufacturer="Ferozsons",    LastUpdated=today },
+            });
+            await context.SaveChangesAsync();
+            Console.WriteLine("[Nexiffy] Seeded 10 sample medicines.");
+        }
 
         // Prune expired revoked tokens on startup
         var pruned = await context.RevokedTokens
             .Where(t => t.ExpiresAt < DateTime.UtcNow)
             .ExecuteDeleteAsync();
-        if (pruned > 0) Console.WriteLine($"[Nexffy] Pruned {pruned} expired revoked token(s).");
+        if (pruned > 0) Console.WriteLine($"[Nexiffy] Pruned {pruned} expired revoked token(s).");
 
-        Console.WriteLine("NexffyDB ready.");
+        Console.WriteLine("NexiffyDB ready.");
     }
     catch (Exception ex)
     {

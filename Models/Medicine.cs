@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Nexffy.Models
+namespace Nexiffy.Models
 {
     public static class BillStatus
     {

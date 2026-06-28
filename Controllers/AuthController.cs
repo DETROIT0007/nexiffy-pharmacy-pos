@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Nexffy.Data;
-using Nexffy.Models;
+using Nexiffy.Data;
+using Nexiffy.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace Nexffy.Controllers
+namespace Nexiffy.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -127,18 +127,15 @@ namespace Nexffy.Controllers
                 return Unauthorized(new { message = "Invalid credentials" });
             }
 
-            bool passwordValid;
             var storedHash = await GetStoredHashAsync();
+            if (storedHash == null)
+            {
+                _logger.LogWarning("Login attempt with no password hash configured (IP: {IP})", HttpContext.Connection.RemoteIpAddress);
+                return Unauthorized(new { message = "Invalid credentials" });
+            }
 
-            if (storedHash != null)
-            {
-                var result = _hasher.VerifyHashedPassword("", storedHash, request.Password);
-                passwordValid = result != PasswordVerificationResult.Failed;
-            }
-            else
-            {
-                passwordValid = request.Password == _config["Auth:Password"];
-            }
+            var verifyResult = _hasher.VerifyHashedPassword("", storedHash, request.Password);
+            bool passwordValid = verifyResult != PasswordVerificationResult.Failed;
 
             if (!passwordValid)
             {
@@ -156,8 +153,8 @@ namespace Nexffy.Controllers
             var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
-                issuer: "nexffy-pharmacy",
-                audience: "nexffy-pos",
+                issuer: "nexiffy-pharmacy",
+                audience: "nexiffy-pos",
                 claims: new[]
                 {
                     new Claim(ClaimTypes.Name, request.Username),
@@ -166,7 +163,7 @@ namespace Nexffy.Controllers
                 expires: DateTime.UtcNow.AddHours(2),
                 signingCredentials: creds);
 
-            Response.Cookies.Append("nexffy_auth", new JwtSecurityTokenHandler().WriteToken(token),
+            Response.Cookies.Append("nexiffy_auth", new JwtSecurityTokenHandler().WriteToken(token),
                 new CookieOptions
                 {
                     HttpOnly  = true,
@@ -187,7 +184,7 @@ namespace Nexffy.Controllers
         public async Task<IActionResult> Logout()
         {
             // Blacklist the JWT so it can't be replayed before it naturally expires
-            var raw = Request.Cookies["nexffy_auth"];
+            var raw = Request.Cookies["nexiffy_auth"];
             if (raw != null)
             {
                 try
@@ -205,9 +202,9 @@ namespace Nexffy.Controllers
                         }
                     }
                 }
-                catch { /* malformed token — just clear the cookie */ }
+                catch (Exception ex) { _logger.LogDebug(ex, "Malformed token on logout — clearing cookie anyway"); }
             }
-            Response.Cookies.Delete("nexffy_auth", new CookieOptions { Path = "/" });
+            Response.Cookies.Delete("nexiffy_auth", new CookieOptions { Path = "/" });
             return Ok();
         }
 
@@ -227,16 +224,11 @@ namespace Nexffy.Controllers
 
             var storedHash = await GetStoredHashAsync();
 
-            bool currentValid;
-            if (storedHash != null)
-            {
-                var result = _hasher.VerifyHashedPassword("", storedHash, req.CurrentPassword);
-                currentValid = result != PasswordVerificationResult.Failed;
-            }
-            else
-            {
-                currentValid = req.CurrentPassword == _config["Auth:Password"];
-            }
+            if (storedHash == null)
+                return BadRequest(new { message = "No password hash configured. Set Auth:PasswordHash in appsettings.json first." });
+
+            var cpResult = _hasher.VerifyHashedPassword("", storedHash, req.CurrentPassword);
+            bool currentValid = cpResult != PasswordVerificationResult.Failed;
 
             if (!currentValid)
                 return BadRequest(new { message = "Current password is incorrect" });
@@ -258,8 +250,8 @@ namespace Nexffy.Controllers
         {
             var keyPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "Nexffy", "jwt.key");
-            return File.ReadAllText(keyPath).Trim();
+                "Nexiffy", "jwt.key");
+            return System.IO.File.ReadAllText(keyPath).Trim();
         }
     }
 }

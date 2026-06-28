@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Nexffy.Data;
-using Nexffy.Models;
+using Nexiffy.Data;
+using Nexiffy.Models;
 using System.Data;
 
-namespace Nexffy.Controllers
+namespace Nexiffy.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -102,12 +102,15 @@ namespace Nexffy.Controllers
                 bill.Date = DateTime.Now.ToString("yyyy-MM-dd");
                 bill.Status = BillStatus.Saved;
 
+                // Batch-load all medicines in one query to avoid N+1 inside the SERIALIZABLE transaction
+                var itemCodes = bill.Items.Select(i => i.MedicineCode).Distinct().ToList();
+                var medicines = await _context.Medicines
+                    .Where(m => itemCodes.Contains(m.Code))
+                    .ToDictionaryAsync(m => m.Code);
+
                 foreach (var item in bill.Items)
                 {
-                    var med = await _context.Medicines
-                        .FirstOrDefaultAsync(m => m.Code == item.MedicineCode);
-
-                    if (med == null)
+                    if (!medicines.TryGetValue(item.MedicineCode, out var med))
                         return BadRequest(new { message = $"Medicine '{item.MedicineCode}' not found" });
 
                     // Override client-supplied rate and amount with server-authoritative values
@@ -172,18 +175,27 @@ namespace Nexffy.Controllers
                         : NotFound(new { message = "Bill not found" });
                 }
 
-                // Restore stock
+                // Restore stock — IgnoreQueryFilters so soft-deleted medicines still get their stock back
                 var bill = await _context.Bills.Include(b => b.Items)
                     .FirstOrDefaultAsync(b => b.Id == id);
 
-                foreach (var item in bill!.Items)
+                var cancelCodes = bill!.Items.Select(i => i.MedicineCode).Distinct().ToList();
+                var cancelMeds = await _context.Medicines.IgnoreQueryFilters()
+                    .Where(m => cancelCodes.Contains(m.Code))
+                    .ToDictionaryAsync(m => m.Code);
+
+                foreach (var item in bill.Items)
                 {
-                    var med = await _context.Medicines
-                        .FirstOrDefaultAsync(m => m.Code == item.MedicineCode);
-                    if (med != null)
+                    if (cancelMeds.TryGetValue(item.MedicineCode, out var med))
                     {
                         med.Stock += (int)item.Qty;
                         med.LastUpdated = DateTime.Now;
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Stock restore skipped — medicine '{Code}' not found during cancel of bill {BillId}",
+                            item.MedicineCode, id);
                     }
                 }
 

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Nexffy.Models;
+using Nexiffy.Models;
 
-namespace Nexffy.Data
+namespace Nexiffy.Data
 {
     public class AppDbContext : DbContext
     {

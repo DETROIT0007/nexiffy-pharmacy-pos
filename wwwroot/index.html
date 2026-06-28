@@ -4,18 +4,19 @@
   <meta charset="UTF-8"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Nexffy — Pharmacy POS</title>
+  <title>Nexiffy — Pharmacy POS</title>
   <link rel="manifest" href="/manifest.json"/>
   <link rel="icon" href="/icon.svg" type="image/svg+xml"/>
-  <meta name="theme-color" content="#2563eb"/>
+  <meta name="theme-color" content="#4f46e5"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="Nexffy POS"/>
+  <meta name="apple-mobile-web-app-title" content="Nexiffy POS"/>
+  <script>(function(){const t=localStorage.getItem('nexiffy_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})();</script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     :root{
-      --primary:#2563eb;--primary-dark:#1d4ed8;--primary-light:#eff6ff;--primary-subtle:#dbeafe;
+      --primary:#4f46e5;--primary-dark:#4338ca;--primary-light:#eef2ff;--primary-subtle:#e0e7ff;
       --success:#059669;--success-light:#d1fae5;
       --warning:#d97706;--warning-light:#fef3c7;
       --danger:#dc2626;--danger-light:#fee2e2;
@@ -24,305 +25,429 @@
       --gray-800:#1e293b;--gray-900:#0f172a;
       --white:#fff;--radius:12px;--radius-sm:8px;
       --shadow-xs:0 1px 2px rgba(0,0,0,.05);
-      --shadow-sm:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+      --shadow-sm:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
       --shadow:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -2px rgba(0,0,0,.05);
-      --shadow-md:0 10px 15px -3px rgba(0,0,0,.08),0 4px 6px -4px rgba(0,0,0,.05);
-      --shadow-lg:0 20px 25px -5px rgba(0,0,0,.12),0 8px 10px -6px rgba(0,0,0,.06);
+      --shadow-md:0 10px 20px -3px rgba(0,0,0,.1),0 4px 8px -4px rgba(0,0,0,.06);
+      --shadow-lg:0 24px 40px -5px rgba(0,0,0,.14),0 10px 16px -6px rgba(0,0,0,.08);
+      --sidebar-w:244px;
+      /* ── Semantic tokens (light) ──────────────── */
+      --bg:#edf0f7;
+      --surface:#fff;
+      --surface-2:#f8f9fc;
+      --surface-3:#fafbfd;
+      --divide:#f1f5f9;
+      --bdr:#e8edf3;
+      --bdr-in:#e2e8f0;
+      --bdr-th:#eaecf0;
+      --bdr-row:#e8ecf2;
+      --hover:#f5f3ff;
+      --tx:#1e293b;
+      --tx-2:#475569;
+      --tx-3:#64748b;
+      --tx-4:#94a3b8;
+      --tx-ph:#b0bac8;
+      --sb:#d1d5db;
+      --sb-h:#9ca3af;
+      --chart-bar:#e2e8f0;
+      --chart-bar-2:#cbd5e1;
+      --chart-line:#e2e8f0;
+      --chart-lbl:#64748b;
+      --chart-lbl-dt:#94a3b8;
     }
-    body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--gray-50);color:var(--gray-800);line-height:1.5}
-    ::-webkit-scrollbar{width:5px;height:5px}
+    [data-theme="dark"]{
+      --bg:#0e1018;
+      --surface:#181b27;
+      --surface-2:#1e2132;
+      --surface-3:#161924;
+      --divide:#252840;
+      --bdr:#282d45;
+      --bdr-in:#2d3252;
+      --bdr-th:#252840;
+      --bdr-row:#1e2132;
+      --hover:#252a45;
+      --tx:#e2e8f0;
+      --tx-2:#94a3b8;
+      --tx-3:#7284a0;
+      --tx-4:#4a5472;
+      --tx-ph:#3d4460;
+      --sb:#282d45;
+      --sb-h:#343860;
+      --primary-light:#1e1b4b;
+      --primary-subtle:#1e1b4b;
+      --success-light:#052e16;
+      --warning-light:#451a03;
+      --danger-light:#450a0a;
+      --white:#181b27;
+      --gray-50:#1e2132;
+      --gray-100:#252840;
+      --gray-200:#282d45;
+      --gray-300:#343860;
+      --gray-400:#4a5472;
+      --gray-500:#7284a0;
+      --gray-600:#94a3b8;
+      --gray-700:#b0bac8;
+      --gray-800:#e2e8f0;
+      --gray-900:#f1f5f9;
+      --chart-bar:#2d3252;
+      --chart-bar-2:#1e2340;
+      --chart-line:#282d45;
+      --chart-lbl:#7284a0;
+      --chart-lbl-dt:#4a5472;
+    }
+    body{font-family:'Segoe UI Variable','Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--tx);line-height:1.5;font-size:14px;transition:background .25s,color .2s}
+    ::-webkit-scrollbar{width:4px;height:4px}
     ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:10px}
-    ::-webkit-scrollbar-thumb:hover{background:var(--gray-400)}
+    ::-webkit-scrollbar-thumb{background:var(--sb);border-radius:10px}
+    ::-webkit-scrollbar-thumb:hover{background:var(--sb-h)}
 
     /* ── Login ─────────────────────────────────── */
     #loginScreen{
       position:fixed;inset:0;
-      background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 55%,#2563eb 100%);
+      background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%);
       display:flex;align-items:center;justify-content:center;z-index:9000;
     }
-    .login-box{
-      background:var(--white);border-radius:20px;padding:44px 40px 36px;width:380px;
-      max-width:95vw;box-shadow:0 25px 50px rgba(0,0,0,.4);
+    #loginScreen::before{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(ellipse at 70% 20%,rgba(99,102,241,.4) 0%,transparent 55%);
     }
-    .login-logo{text-align:center;margin-bottom:24px}
+    .login-box{
+      background:var(--surface);border-radius:20px;padding:44px 40px 36px;width:400px;
+      max-width:95vw;box-shadow:0 32px 64px rgba(0,0,0,.45),0 0 0 1px var(--bdr);position:relative;
+    }
+    .login-logo{text-align:center;margin-bottom:26px}
     .login-logo .rx{
       display:inline-flex;align-items:center;justify-content:center;
-      width:58px;height:58px;background:var(--primary);border-radius:16px;
-      font-size:1.7rem;margin-bottom:14px;box-shadow:0 8px 20px rgba(37,99,235,.35);
+      width:60px;height:60px;background:linear-gradient(135deg,var(--primary),#6366f1);border-radius:16px;
+      margin-bottom:14px;box-shadow:0 8px 20px rgba(79,70,229,.45);
     }
-    .login-box h1{font-size:1.6rem;font-weight:800;color:var(--gray-900);text-align:center;margin-bottom:4px}
-    .login-box p{color:var(--gray-400);font-size:.8rem;text-align:center;margin-bottom:28px}
-    .login-field{margin-bottom:16px}
-    .login-field label{font-size:.74rem;color:var(--gray-600);display:block;margin-bottom:5px;font-weight:600}
+    .login-box h1{font-size:1.6rem;font-weight:800;color:var(--tx);text-align:center;margin-bottom:4px;letter-spacing:-.4px}
+    .login-box p{color:var(--tx-4);font-size:.82rem;text-align:center;margin-bottom:28px}
+    .login-field{margin-bottom:15px}
+    .login-field label{font-size:.73rem;color:var(--tx-3);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.02em}
     .login-field input{
-      width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);
-      border-radius:var(--radius-sm);font-size:.92rem;outline:none;
-      transition:border-color .15s,box-shadow .15s;
+      width:100%;padding:11px 14px;border:1.5px solid var(--bdr-in);
+      border-radius:9px;font-size:.92rem;outline:none;
+      transition:border-color .15s,box-shadow .15s;background:var(--surface-2);color:var(--tx);
     }
-    .login-field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
-    #loginError{color:var(--danger);font-size:.8rem;text-align:center;min-height:20px;margin-top:6px}
+    .login-field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.12);background:var(--surface)}
+    #loginError{color:var(--danger);font-size:.8rem;text-align:center;min-height:20px;margin-top:6px;font-weight:500}
     .btn-login{
       width:100%;padding:12px;background:var(--primary);color:#fff;
-      border:none;border-radius:var(--radius-sm);font-size:.94rem;font-weight:700;
-      cursor:pointer;margin-top:10px;transition:background .15s,box-shadow .15s;
-      box-shadow:0 4px 14px rgba(37,99,235,.35);
+      border:none;border-radius:9px;font-size:.93rem;font-weight:700;
+      cursor:pointer;margin-top:10px;transition:all .2s;
+      box-shadow:0 4px 14px rgba(79,70,229,.4);letter-spacing:.01em;
     }
-    .btn-login:hover{background:var(--primary-dark);box-shadow:0 6px 18px rgba(37,99,235,.4)}
-    .btn-login:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
+    .btn-login:hover{background:var(--primary-dark);box-shadow:0 6px 20px rgba(79,70,229,.5);transform:translateY(-1px)}
+    .btn-login:active{transform:translateY(0)}
+    .btn-login:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
 
     /* ── App Shell ─────────────────────────────── */
     #appShell{display:flex;height:100vh;overflow:hidden}
+
+    /* ── Sidebar ────────────────────────────────── */
     .sidebar{
-      width:230px;
-      background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);
-      display:flex;flex-direction:column;flex-shrink:0;transition:transform .25s;z-index:100;
+      width:var(--sidebar-w);
+      background:#0f1117;
+      display:flex;flex-direction:column;flex-shrink:0;transition:transform .28s cubic-bezier(.4,0,.2,1);
+      z-index:100;border-right:1px solid rgba(255,255,255,.05);
     }
-    .logo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
-    .logo-inner{display:flex;align-items:center;gap:10px}
+    .logo{padding:0 16px;height:64px;display:flex;align-items:center;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.06)}
+    .logo-inner{display:flex;align-items:center;gap:11px}
     .logo-icon{
-      width:38px;height:38px;background:var(--primary);border-radius:10px;
-      display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-      flex-shrink:0;box-shadow:0 4px 12px rgba(37,99,235,.4);
+      width:36px;height:36px;
+      background:var(--primary);
+      border-radius:9px;
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;box-shadow:0 4px 12px rgba(79,70,229,.4);
     }
-    .logo-text h1{color:#fff;font-size:1.1rem;font-weight:800;letter-spacing:-.3px}
-    .logo-text span{color:#64748b;font-size:.66rem;display:block;margin-top:1px;letter-spacing:.06em;text-transform:uppercase}
-    .nav-section{padding:18px 18px 5px;font-size:.61rem;font-weight:700;color:#475569;letter-spacing:.1em;text-transform:uppercase}
-    nav{flex:1;padding:6px 0;overflow-y:auto}
+    .logo-text h1{color:#fff;font-size:1.12rem;font-weight:800;letter-spacing:-.4px}
+    .logo-text span{color:rgba(255,255,255,.4);font-size:.56rem;display:block;margin-top:2px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+    .nav-section{padding:20px 16px 5px;font-size:.68rem;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.1em;text-transform:uppercase}
+    nav{flex:1;padding:5px 8px;overflow-y:auto}
     nav a{
       display:flex;align-items:center;gap:10px;
-      padding:10px 16px;margin:1px 8px;border-radius:8px;
-      color:#94a3b8;text-decoration:none;font-size:.84rem;cursor:pointer;
-      transition:all .15s;user-select:none;border-left:3px solid transparent;
+      padding:9px 11px;border-radius:8px;margin-bottom:1px;
+      color:rgba(255,255,255,.48);text-decoration:none;font-size:.835rem;cursor:pointer;font-weight:500;
+      transition:all .15s;user-select:none;position:relative;
     }
-    nav a .icon{font-size:.92rem;width:22px;text-align:center;flex-shrink:0}
-    nav a:hover{background:rgba(255,255,255,.06);color:#cbd5e1;border-left-color:rgba(255,255,255,.12)}
-    nav a.active{background:rgba(37,99,235,.18);color:#fff;border-left-color:var(--primary);font-weight:600}
-    .sidebar-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.06);color:#475569;font-size:.69rem}
+    nav a .icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:.75;transition:opacity .15s}
+    nav a:hover{background:rgba(255,255,255,.10);color:rgba(255,255,255,.85)}
+    nav a:hover .icon{opacity:1}
+    nav a.active{background:rgba(79,70,229,.3);color:#fff;font-weight:600}
+    nav a.active::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:3px;background:var(--primary);border-radius:0 3px 3px 0}
+    nav a.active .icon{opacity:1}
+    .sidebar-footer{
+      margin:8px;padding:10px 11px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+      color:rgba(255,255,255,.45);font-size:.7rem;font-weight:500;
+    }
+    .sidebar-footer strong{color:rgba(255,255,255,.7);font-weight:600}
     .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 
     /* ── Topbar ─────────────────────────────────── */
     .topbar{
-      background:var(--white);border-bottom:1px solid var(--gray-200);
-      padding:0 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;
-      height:56px;box-shadow:0 1px 3px rgba(0,0,0,.06);
+      background:var(--surface);border-bottom:1px solid var(--bdr);
+      padding:0 24px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+      height:64px;box-shadow:var(--shadow-xs);
     }
-    .topbar h2{font-size:.96rem;font-weight:700;flex:1;color:var(--gray-800)}
-    .hamburger{display:none;background:none;border:none;cursor:pointer;font-size:1.2rem;padding:6px;color:var(--gray-600);border-radius:7px}
-    .hamburger:hover{background:var(--gray-100)}
-    .topbar-right{display:flex;align-items:center;gap:8px}
-    .user-pill{display:flex;align-items:center;gap:7px;background:var(--gray-100);border-radius:20px;padding:4px 12px 4px 4px}
+    .topbar h2{font-size:1.1rem;font-weight:700;flex:1;color:var(--tx);letter-spacing:-.3px}
+    .hamburger{display:none;background:none;border:none;cursor:pointer;font-size:1.2rem;padding:6px;color:var(--tx-2);border-radius:8px;transition:background .15s}
+    .hamburger:hover{background:var(--surface-2)}
+    .topbar-right{display:flex;align-items:center;gap:7px}
+    .user-pill{
+      display:flex;align-items:center;gap:7px;background:var(--surface-2);
+      border:1px solid var(--bdr);border-radius:20px;padding:4px 12px 4px 4px;
+    }
     .user-ava{
-      width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;
-      display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;
+      width:28px;height:28px;border-radius:50%;
+      background:var(--primary);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;flex-shrink:0;
     }
-    #userBadge{font-size:.8rem;color:var(--gray-700);font-weight:500}
+    #userBadge{font-size:.78rem;color:var(--tx);font-weight:600}
     .btn-logout{
-      background:none;border:1.5px solid var(--gray-200);border-radius:8px;
-      padding:5px 12px;font-size:.78rem;cursor:pointer;color:var(--gray-600);
-      transition:all .15s;font-weight:500;
+      background:transparent;border:1.5px solid var(--bdr-in);border-radius:8px;
+      padding:5px 12px;font-size:.77rem;cursor:pointer;color:var(--tx-2);
+      transition:all .15s;font-weight:600;
     }
-    .btn-logout:hover{background:var(--danger-light);border-color:#fca5a5;color:var(--danger)}
-    .content{flex:1;overflow-y:auto;padding:20px}
+    .btn-logout:hover{background:var(--danger-light);border-color:var(--danger);color:var(--danger)}
+    .topbar .btn-ghost{background:transparent;border:1.5px solid var(--bdr-in);color:var(--tx-2);border-radius:8px}
+    .topbar .btn-ghost:hover{background:var(--surface-2);border-color:var(--bdr-th);color:var(--tx)}
+    #offlinePill{background:var(--warning-light);color:var(--warning);border:1px solid rgba(217,119,6,.25);border-radius:16px;padding:3px 10px;font-size:.7rem;font-weight:700}
+    #syncPendingBtn{background:var(--primary-light);color:var(--primary);border:1.5px solid rgba(79,70,229,.3);border-radius:8px}
+    .btn-theme{
+      background:transparent;border:1.5px solid var(--bdr-in);border-radius:8px;
+      width:32px;height:32px;cursor:pointer;color:var(--tx-2);
+      display:flex;align-items:center;justify-content:center;
+      transition:all .15s;flex-shrink:0;
+    }
+    .btn-theme:hover{background:var(--surface-2);color:var(--tx)}
+    .content{flex:1;overflow-y:auto;padding:28px 32px}
 
     /* ── Stat Cards ────────────────────────────── */
-    .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:14px;margin-bottom:22px}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:28px}
     .stat-card{
-      background:var(--white);border-radius:var(--radius);padding:18px;
-      box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);
-      display:flex;align-items:center;gap:14px;transition:box-shadow .15s,transform .15s;
+      background:var(--surface);border-radius:var(--radius);padding:20px 18px;
+      box-shadow:var(--shadow-sm);
+      border:1px solid var(--bdr);border-top:3px solid transparent;
+      display:flex;align-items:center;gap:14px;
+      transition:box-shadow .2s,transform .18s,background .25s,border-color .25s;
     }
-    .stat-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
-    .stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0}
+    .stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+    .stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .stat-body{flex:1;min-width:0}
-    .stat-card .val{font-size:1.4rem;font-weight:800;margin-bottom:2px;line-height:1.1}
-    .stat-card .lbl{font-size:.69rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;font-weight:500}
-    .stat-card.blue .stat-icon{background:var(--primary-subtle);color:var(--primary)}
+    .stat-card .val{font-size:1.65rem;font-weight:800;margin-bottom:4px;line-height:1.1;letter-spacing:-.6px;color:var(--tx)}
+    .stat-card .lbl{font-size:.72rem;color:var(--tx-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;line-height:1.3}
+    .stat-card.blue{border-top-color:var(--primary)}
+    .stat-card.blue .stat-icon{background:var(--primary-light);color:var(--primary)}
     .stat-card.blue .val{color:var(--primary)}
+    .stat-card.green{border-top-color:var(--success)}
     .stat-card.green .stat-icon{background:var(--success-light);color:var(--success)}
-    .stat-card.green .val{color:var(--success)}
+    .stat-card.orange{border-top-color:var(--warning)}
     .stat-card.orange .stat-icon{background:var(--warning-light);color:var(--warning)}
-    .stat-card.orange .val{color:var(--warning)}
+    .stat-card.red{border-top-color:var(--danger)}
     .stat-card.red .stat-icon{background:var(--danger-light);color:var(--danger)}
-    .stat-card.red .val{color:var(--danger)}
 
-    /* ── Tables ────────────────────────────────── */
-    .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);overflow:hidden;margin-bottom:18px}
-    .card-header{padding:14px 18px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
-    .card-header h3{font-size:.86rem;font-weight:700;color:var(--gray-700)}
-    table{width:100%;border-collapse:collapse;font-size:.83rem}
-    th{background:var(--gray-50);padding:10px 14px;text-align:left;font-size:.69rem;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-500);font-weight:600;border-bottom:1px solid var(--gray-200)}
-    td{padding:10px 14px;border-bottom:1px solid var(--gray-100);vertical-align:middle;color:var(--gray-700)}
+    /* ── Cards / Tables ────────────────────────── */
+    .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--bdr);overflow:hidden;margin-bottom:16px;transition:background .25s,border-color .25s,box-shadow .2s}
+    .card-header{padding:16px 20px;border-bottom:1px solid var(--divide);display:flex;align-items:center;justify-content:space-between;background:var(--surface)}
+    .card-header h3{font-size:.9rem;font-weight:700;color:var(--tx)}
+    table{width:100%;border-collapse:collapse;font-size:.82rem}
+    th{
+      background:var(--surface-2);padding:12px 16px;text-align:left;
+      font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-3);
+      font-weight:700;border-bottom:2px solid var(--bdr);white-space:nowrap;
+    }
+    td{padding:12px 16px;border-bottom:1px solid var(--bdr-row);vertical-align:middle;color:var(--tx)}
     tr:last-child td{border-bottom:none}
-    tr:hover td{background:var(--gray-50)}
+    tbody tr:hover td{background:var(--hover);transition:background .1s}
 
     /* ── Forms ─────────────────────────────────── */
-    .form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+    .form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
     input,select{
-      padding:8px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);
-      font-size:.85rem;outline:none;background:var(--white);color:var(--gray-800);
-      transition:border-color .15s,box-shadow .15s;
+      padding:9px 12px;border:1.5px solid var(--bdr-in);border-radius:8px;
+      font-size:.84rem;outline:none;background:var(--surface);color:var(--tx);
+      transition:border-color .15s,box-shadow .15s,background .25s;font-family:inherit;
     }
-    input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-    .input-lg{flex:1;min-width:150px}
+    input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.2)}
+    input::placeholder{color:var(--tx-ph)}
+    select option{background:var(--surface);color:var(--tx)}
+    .input-lg{flex:1;min-width:140px}
 
     /* ── Buttons ────────────────────────────────── */
     .btn{
-      padding:8px 16px;border:none;border-radius:var(--radius-sm);
-      font-size:.83rem;font-weight:600;cursor:pointer;
+      padding:8px 15px;border:none;border-radius:8px;
+      font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;
       transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;
     }
     .btn:active{transform:scale(.97)}
-    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
-    .btn-primary{background:var(--primary);color:#fff;box-shadow:0 1px 3px rgba(37,99,235,.25)}
-    .btn-primary:hover{background:var(--primary-dark)}
-    .btn-success{background:var(--success);color:#fff;box-shadow:0 1px 3px rgba(5,150,105,.25)}
-    .btn-success:hover{background:#047857}
-    .btn-danger{background:var(--danger-light);color:var(--danger)}
-    .btn-danger:hover{background:#fecaca}
+    .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+    .btn-primary{background:var(--primary);color:#fff;box-shadow:0 1px 3px rgba(79,70,229,.3)}
+    .btn-primary:hover{background:var(--primary-dark);box-shadow:0 4px 12px rgba(79,70,229,.38);transform:translateY(-1px)}
+    .btn-success{background:var(--success);color:#fff;box-shadow:0 1px 3px rgba(5,150,105,.3)}
+    .btn-success:hover{background:#047857;box-shadow:0 4px 12px rgba(5,150,105,.38);transform:translateY(-1px)}
+    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 1px 3px rgba(220,38,38,.3)}
+    .btn-danger:hover{background:#b91c1c;box-shadow:0 4px 12px rgba(220,38,38,.38);transform:translateY(-1px)}
     .btn-warning{background:var(--warning-light);color:var(--warning)}
-    .btn-ghost{background:none;border:1.5px solid var(--gray-200);color:var(--gray-600)}
-    .btn-ghost:hover{background:var(--gray-100)}
-    .btn-sm{padding:4px 10px;font-size:.75rem;border-radius:6px}
+    .btn-ghost{background:transparent;border:1.5px solid var(--bdr-in);color:var(--tx-3)}
+    .btn-ghost:hover{background:var(--surface-2);border-color:var(--bdr-th);color:var(--tx)}
+    .btn-sm{padding:4px 10px;font-size:.73rem;border-radius:6px}
 
     /* ── Badges ─────────────────────────────────── */
-    .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.69rem;font-weight:700}
+    .badge{display:inline-block;padding:3px 8px;border-radius:16px;font-size:.67rem;font-weight:700}
     .badge-saved{background:var(--success-light);color:var(--success)}
     .badge-cancelled{background:var(--danger-light);color:var(--danger)}
-    .badge-cat{background:var(--primary-subtle);color:var(--primary)}
+    .badge-cat{background:var(--primary-light);color:var(--primary)}
     .badge-low{background:var(--warning-light);color:var(--warning)}
 
     /* ── Pagination ─────────────────────────────── */
-    .pagination{display:flex;align-items:center;gap:8px;padding:14px 0;justify-content:center}
-    .pagination span{font-size:.81rem;color:var(--gray-400)}
+    .pagination{display:flex;align-items:center;gap:6px;padding:12px 0;justify-content:center}
+    .pagination span{font-size:.79rem;color:var(--tx-4)}
 
     /* ── POS Layout ─────────────────────────────── */
-    .pos-layout{display:grid;grid-template-columns:1fr 370px;height:100%;overflow:hidden}
-    .pos-left{padding:16px;overflow-y:auto;background:var(--gray-50)}
-    .pos-right{background:var(--white);border-left:1px solid var(--gray-200);display:flex;flex-direction:column;height:calc(100vh - 56px);overflow:hidden}
-    .med-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+    .pos-layout{display:grid;grid-template-columns:1fr clamp(320px,28vw,440px);height:100%;overflow:hidden}
+    .pos-left{padding:14px;overflow-y:auto;background:var(--bg)}
+    .pos-right{background:var(--surface);border-left:1px solid var(--bdr);display:flex;flex-direction:column;height:calc(100vh - 64px);overflow:hidden}
+    .med-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:10px}
     .med-card{
-      background:var(--white);border:1.5px solid var(--gray-200);border-radius:var(--radius);
-      padding:14px;cursor:pointer;box-shadow:var(--shadow-xs);
-      transition:border-color .15s,box-shadow .15s,transform .1s;user-select:none;
+      background:var(--surface);border:1px solid var(--bdr);border-radius:var(--radius);
+      padding:14px;cursor:pointer;
+      transition:all .15s ease,background .25s,border-color .25s;user-select:none;
     }
-    .med-card:hover{border-color:var(--primary);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+    .med-card:hover{border-color:var(--primary);box-shadow:0 6px 20px rgba(79,70,229,.14);transform:translateY(-2px)}
     .med-card:active{transform:scale(.97)}
-    .med-card.out-of-stock{opacity:.45;cursor:not-allowed}
-    .med-card .mcat{display:inline-block;background:var(--primary-subtle);color:var(--primary);border-radius:4px;padding:2px 7px;font-size:.63rem;font-weight:700;margin-bottom:6px}
-    .med-card .mname{font-weight:700;font-size:.85rem;margin-bottom:2px;color:var(--gray-800);line-height:1.3}
-    .med-card .mgen{font-size:.7rem;color:var(--gray-400);margin-bottom:8px}
-    .med-card .mprice{color:var(--primary);font-weight:800;font-size:.96rem}
-    .med-card .mstock{font-size:.69rem;color:var(--gray-400);margin-top:3px}
+    .med-card.out-of-stock{opacity:.38;cursor:not-allowed;filter:grayscale(.6)}
+    .med-card .mcat{
+      display:inline-block;background:var(--primary-light);color:var(--primary);
+      border-radius:6px;padding:2px 8px;font-size:.68rem;font-weight:700;margin-bottom:7px;letter-spacing:.01em;
+    }
+    .med-card .mname{font-weight:700;font-size:.84rem;margin-bottom:2px;color:var(--tx);line-height:1.3}
+    .med-card .mgen{font-size:.68rem;color:var(--tx-4);margin-bottom:8px;line-height:1.3}
+    .med-card .mprice{color:var(--primary);font-weight:800;font-size:.95rem}
+    .med-card .mstock{font-size:.67rem;margin-top:4px;font-weight:500;color:var(--tx-3)}
 
     /* ── Cart ───────────────────────────────────── */
-    .cart-section{padding:14px;border-bottom:1px solid var(--gray-100);background:var(--gray-50)}
-    .cart-section label{font-size:.68rem;color:var(--gray-500);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-    .cart-section input{width:100%;margin-bottom:8px}
+    .cart-section{padding:11px 13px;border-bottom:1px solid var(--divide);background:var(--surface-3)}
+    .cart-section label{font-size:.75rem;color:var(--tx-2);display:block;margin-bottom:3px;font-weight:600;letter-spacing:0}
+    .cart-section input{width:100%;margin-bottom:7px;background:var(--surface)}
     .cart-items{flex:1;overflow-y:auto}
-    .cart-row{display:grid;grid-template-columns:1fr 82px 82px 22px;align-items:center;gap:5px;padding:9px 14px;border-bottom:1px solid var(--gray-100);transition:background .1s}
-    .cart-row:hover{background:var(--gray-50)}
-    .cart-row .cn{font-size:.81rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .cart-row .cs{font-size:.67rem;color:var(--gray-400)}
+    .cart-row{display:grid;grid-template-columns:1fr 82px 80px 20px;align-items:center;gap:4px;padding:9px 12px;border-bottom:1px solid var(--bdr-row);transition:background .1s}
+    .cart-row:hover{background:var(--surface-2)}
+    .cart-row .cn{font-size:.79rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)}
+    .cart-row .cs{font-size:.63rem;color:var(--tx-4);margin-top:1px}
     .qty-ctrl{display:flex;align-items:center;gap:2px}
     .qty-ctrl button{
-      width:22px;height:22px;border:1.5px solid var(--gray-200);background:var(--white);
+      width:22px;height:22px;border:1px solid var(--bdr-in);background:var(--surface);
       border-radius:5px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;
-      justify-content:center;flex-shrink:0;transition:all .12s;color:var(--gray-600);
+      justify-content:center;flex-shrink:0;transition:all .12s;color:var(--tx-2);
     }
     .qty-ctrl button:hover{background:var(--primary);border-color:var(--primary);color:#fff}
-    .qty-ctrl input{width:30px;text-align:center;padding:1px 2px;font-size:.8rem}
-    .cart-row .ca{font-size:.82rem;font-weight:700;text-align:right;color:var(--primary)}
-    .rm-btn{background:none;border:none;cursor:pointer;color:var(--gray-300);font-size:.9rem;padding:2px;line-height:1;transition:color .1s}
-    .rm-btn:hover{color:var(--danger)}
-    .cart-empty{padding:32px;text-align:center;color:var(--gray-300);font-size:.85rem}
-    .totals-section{padding:12px 14px;border-top:1px solid var(--gray-200)}
-    .tot-row{display:flex;justify-content:space-between;font-size:.83rem;margin-bottom:5px;color:var(--gray-600)}
-    .tot-row input{width:90px;text-align:right;padding:3px 6px}
-    .tot-row.grand{font-size:1rem;font-weight:800;color:var(--gray-800);border-top:2px solid var(--gray-200);padding-top:8px;margin-top:6px}
-    .cart-actions{padding:10px 14px;display:flex;gap:7px;border-top:1px solid var(--gray-100);flex-shrink:0}
-    .cart-actions .btn{flex:1;justify-content:center}
+    .qty-ctrl input{width:30px;text-align:center;padding:2px;font-size:.77rem;border-radius:4px}
+    .cart-row .ca{font-size:.81rem;font-weight:700;text-align:right;color:var(--tx)}
+    .rm-btn{background:none;border:none;cursor:pointer;color:var(--tx-4);font-size:.85rem;padding:3px;line-height:1;transition:all .12s;border-radius:4px}
+    .rm-btn:hover{color:var(--danger);background:var(--danger-light)}
+    .cart-empty{padding:36px 20px;text-align:center;color:var(--tx-4);font-size:.82rem}
+    .cart-empty svg{display:block;margin:0 auto 10px;opacity:.3}
+    .totals-section{padding:11px 13px;border-top:1px solid var(--bdr);background:var(--surface-3)}
+    .tot-row{display:flex;justify-content:space-between;align-items:center;font-size:.81rem;margin-bottom:6px;color:var(--tx-2)}
+    .tot-row input{width:88px;text-align:right;padding:4px 7px}
+    .tot-row.grand{font-size:.98rem;font-weight:800;color:var(--tx);border-top:1.5px solid var(--bdr-in);padding-top:9px;margin-top:6px}
+    .cart-actions{padding:9px 11px;display:flex;gap:6px;border-top:1px solid var(--divide);flex-shrink:0}
+    .cart-actions .btn{flex:1;justify-content:center;padding:10px}
 
     /* ── Modals ─────────────────────────────────── */
     .modal-overlay{
-      display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);
-      backdrop-filter:blur(3px);z-index:500;align-items:center;justify-content:center;
+      display:none;position:fixed;inset:0;background:rgba(8,12,28,.6);
+      backdrop-filter:blur(4px);z-index:500;align-items:center;justify-content:center;
     }
     .modal-overlay.open{display:flex}
     .modal{
-      background:var(--white);border-radius:16px;padding:24px;width:480px;
-      max-width:95vw;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;
-      animation:modalIn .2s ease;
+      background:var(--surface);border-radius:14px;width:490px;
+      max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.28),0 0 0 1px var(--bdr);max-height:90vh;overflow-y:auto;
+      animation:modalIn .2s cubic-bezier(.34,1.26,.64,1);
     }
-    @keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
-    .modal-wide{width:640px}
-    .modal h3{font-size:.94rem;font-weight:700;margin-bottom:16px;color:var(--gray-800);padding-bottom:12px;border-bottom:1px solid var(--gray-100)}
-    .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
+    .modal-wide{width:660px}
+    .modal h3{
+      font-size:.92rem;font-weight:700;color:var(--tx);
+      padding:16px 22px 13px;border-bottom:1px solid var(--divide);margin-bottom:0;
+      display:flex;align-items:center;gap:9px;letter-spacing:-.1px;
+    }
+    .modal h3::before{display:none}
+    .modal > *:not(h3):not(.modal-actions){padding-left:22px;padding-right:22px}
+    .modal > h3 + *{padding-top:16px}
+    .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-bottom:18px}
     .form-col{display:flex;flex-direction:column;gap:5px}
-    .form-col label{font-size:.73rem;color:var(--gray-500);font-weight:600}
+    .form-col label{font-size:.71rem;color:var(--tx-3);font-weight:600;letter-spacing:.01em}
     .form-col input,.form-col select{width:100%}
-    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100)}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:13px 22px;border-top:1px solid var(--divide);margin-top:0}
 
     /* ── Receipt ────────────────────────────────── */
-    .receipt-area{font-family:'Courier New',monospace;font-size:.8rem;background:var(--gray-50);border-radius:8px;padding:16px;max-height:420px;overflow-y:auto;border:1px solid var(--gray-100)}
-    .receipt-area hr{border:none;border-top:1px dashed var(--gray-300);margin:8px 0}
+    .receipt-area{font-family:'Courier New',monospace;font-size:.78rem;background:var(--surface-2);border-radius:8px;padding:16px;max-height:420px;overflow-y:auto;border:1px solid var(--bdr)}
+    .receipt-area hr{border:none;border-top:1px dashed var(--bdr-th);margin:8px 0}
     .receipt-row{display:flex;justify-content:space-between}
 
     /* ── Toast ──────────────────────────────────── */
     #toast{
-      position:fixed;bottom:20px;right:20px;padding:11px 18px;border-radius:10px;
-      font-size:.83rem;font-weight:500;opacity:0;transition:opacity .25s,transform .25s;
-      pointer-events:none;box-shadow:var(--shadow-md);z-index:9999;
-      background:var(--gray-800);color:#fff;max-width:320px;transform:translateY(8px);
+      position:fixed;bottom:20px;right:20px;padding:12px 18px;border-radius:var(--radius);
+      font-size:.84rem;font-weight:600;opacity:0;transition:opacity .22s,transform .22s;
+      pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.28),0 0 0 1px rgba(255,255,255,.06);z-index:9999;
+      background:#1e293b;color:#fff;max-width:320px;transform:translateY(8px);
+      display:flex;align-items:center;gap:8px;
     }
+    [data-theme="dark"] #toast{background:#2d3252}
     #toast.err{background:var(--danger)}
     #toast.ok{background:var(--success)}
     #toast.show{opacity:1;transform:translateY(0)}
 
     /* ── Pages ──────────────────────────────────── */
     .page{display:none}
-    .page.active{display:block}
-    #page-pos.active{display:flex;flex-direction:column;height:calc(100vh - 56px);overflow:hidden}
+    .page.active{display:block;animation:pageIn .15s ease}
+    @keyframes pageIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+    #page-pos.active{display:flex;flex-direction:column;height:calc(100vh - 64px);overflow:hidden;animation:none}
 
     /* ── Loading ────────────────────────────────── */
-    .loading-row td{text-align:center;padding:28px;color:var(--gray-400)}
-    .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--gray-200);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+    .loading-row td{text-align:center;padding:32px;color:var(--tx-4)}
+    .spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--bdr-in);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
     @keyframes spin{to{transform:rotate(360deg)}}
 
     /* ── Sidebar overlay ────────────────────────── */
-    .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:99;backdrop-filter:blur(2px)}
+    .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(8,12,28,.6);z-index:99;backdrop-filter:blur(3px)}
 
     /* ── Dashboard grid ─────────────────────────── */
-    .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+    .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
 
     /* ── Period Tabs ─────────────────────────────── */
-    .period-tabs{display:flex;gap:3px;margin-bottom:18px;background:var(--white);border-radius:10px;padding:4px;box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);width:fit-content}
-    .period-tab{padding:6px 18px;border:none;border-radius:7px;font-size:.8rem;font-weight:500;cursor:pointer;background:transparent;color:var(--gray-500);transition:all .15s}
-    .period-tab.active{background:var(--primary);color:#fff;font-weight:600;box-shadow:0 1px 3px rgba(37,99,235,.3)}
-    .period-tab:not(.active):hover{background:var(--gray-100);color:var(--gray-700)}
+    .period-tabs{display:inline-flex;gap:2px;margin-bottom:16px;background:var(--bdr-th);border-radius:10px;padding:3px}
+    .period-tab{padding:6px 18px;border:none;border-radius:7px;font-size:.79rem;font-weight:600;cursor:pointer;background:transparent;color:var(--tx-3);transition:all .15s;font-family:inherit}
+    .period-tab.active{background:var(--surface);color:var(--primary);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+    .period-tab:not(.active):hover{background:var(--surface-2);color:var(--tx)}
 
     /* ── Chart / Status blocks ───────────────────── */
-    .chart-empty{text-align:center;color:var(--gray-400);padding:24px;font-size:.83rem}
+    .chart-empty{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      min-height:170px;text-align:center;color:var(--tx-4);font-size:.82rem;line-height:1.7;padding:20px;
+    }
+    .chart-empty-icon{font-size:2.4rem;margin-bottom:10px;opacity:.3;display:block;line-height:1}
 
     /* ── Install banner ─────────────────────────── */
     #installBanner{
       display:none;position:fixed;bottom:0;left:0;right:0;z-index:8000;
-      background:var(--primary);color:#fff;
-      padding:12px 20px;display:none;align-items:center;gap:14px;
+      background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;
+      padding:13px 24px;align-items:center;gap:16px;
       box-shadow:0 -4px 16px rgba(0,0,0,.2);
     }
     #installBanner.show{display:flex}
-    #installBanner .ib-text{flex:1;font-size:.88rem}
+    #installBanner .ib-text{flex:1;font-size:.87rem}
     #installBanner .ib-text strong{display:block;font-weight:700;margin-bottom:2px}
-    #installBanner .ib-text span{opacity:.85;font-size:.8rem}
-    .btn-install{background:#fff;color:var(--primary);font-weight:700;border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:.84rem}
-    .btn-install:hover{background:var(--primary-subtle)}
-    .btn-ib-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:1.2rem;cursor:pointer;padding:4px 8px;line-height:1}
+    #installBanner .ib-text span{opacity:.8;font-size:.79rem}
+    .btn-install{background:#fff;color:var(--primary);font-weight:700;border:none;border-radius:8px;padding:7px 18px;cursor:pointer;font-size:.83rem;transition:all .15s}
+    .btn-install:hover{background:#eef2ff}
+    .btn-ib-close{background:none;border:none;color:rgba(255,255,255,.65);font-size:1.1rem;cursor:pointer;padding:4px 8px;line-height:1;border-radius:5px;transition:all .15s}
+    .btn-ib-close:hover{background:rgba(255,255,255,.12)}
 
     /* ── Offline / Sync ──────────────────────────── */
-    #offlinePill{display:none;background:var(--danger-light);color:var(--danger);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:700;border:1.5px solid #fca5a5}
-    #syncPendingBtn{display:none;background:var(--warning-light);color:var(--warning);border:1.5px solid #fde68a;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;cursor:pointer;animation:pulse 2s infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+    #offlinePill{display:none;border-radius:16px;padding:3px 10px;font-size:.7rem;font-weight:700}
+    #syncPendingBtn{display:none;border-radius:8px;padding:4px 11px;font-size:.73rem;font-weight:700;cursor:pointer;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
 
     @media(max-width:768px){
       .sidebar{position:fixed;top:0;left:0;height:100vh;transform:translateX(-100%)}
@@ -331,9 +456,11 @@
       .hamburger{display:block}
       .pos-layout{grid-template-columns:1fr}
       .pos-right{height:auto;max-height:60vh}
-      #page-pos.active{height:auto;overflow:auto}
+      #page-pos.active{height:auto;overflow:auto;animation:none}
       .modal-grid{grid-template-columns:1fr}
-      .stat-grid{grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px}
+      .stat-grid{grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
+      .content{padding:12px 14px}
+      .topbar{padding:0 14px}
     }
   </style>
 </head>
@@ -341,9 +468,11 @@
 
 <!-- ── Install Banner ────────────────────────────── -->
 <div id="installBanner">
-  <div style="font-size:1.8rem">💊</div>
+  <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <svg width="18" height="18" viewBox="0 0 22 22" fill="white"><rect x="7" y="0" width="8" height="22" rx="3"/><rect x="0" y="7" width="22" height="8" rx="3"/></svg>
+  </div>
   <div class="ib-text">
-    <strong>Install Nexffy POS</strong>
+    <strong>Install Nexiffy POS</strong>
     <span>Add to desktop for instant offline access — no browser needed</span>
   </div>
   <button class="btn-install" id="installBtn">Install App</button>
@@ -353,15 +482,22 @@
 <!-- ── Login Screen ─────────────────────────────── -->
 <div id="loginScreen">
   <div class="login-box">
-    <div class="login-logo"><div class="rx">💊</div></div>
-    <h1>Nexffy</h1>
+    <div class="login-logo">
+      <div class="rx">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="white">
+          <rect x="10" y="0" width="12" height="32" rx="4"/>
+          <rect x="0" y="10" width="32" height="12" rx="4"/>
+        </svg>
+      </div>
+    </div>
+    <h1>Nexiffy</h1>
     <p>Pharmacy Point of Sale</p>
     <div class="login-field">
-      <label>Username</label>
-      <input id="loginUser" type="text" placeholder="admin" autocomplete="username" />
+      <label for="loginUser">Username</label>
+      <input id="loginUser" type="text" placeholder="admin" autocomplete="username" autofocus />
     </div>
     <div class="login-field">
-      <label>Password</label>
+      <label for="loginPass">Password</label>
       <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" />
     </div>
     <div id="loginError"></div>
@@ -376,18 +512,23 @@
   <div class="sidebar" id="sidebar">
     <div class="logo">
       <div class="logo-inner">
-        <div class="logo-icon">💊</div>
-        <div class="logo-text"><h1>Nexffy</h1><span>Pharmacy POS</span></div>
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="white">
+            <rect x="7" y="0" width="8" height="22" rx="3"/>
+            <rect x="0" y="7" width="22" height="8" rx="3"/>
+          </svg>
+        </div>
+        <div class="logo-text"><h1>Nexiffy</h1><span>Pharmacy POS</span></div>
       </div>
     </div>
     <nav id="mainNav">
       <div class="nav-section">Main Menu</div>
-      <a class="active" data-page="dashboard"><span class="icon">📊</span> Dashboard</a>
-      <a data-page="pos"><span class="icon">🛒</span> Point of Sale</a>
-      <a data-page="medicines"><span class="icon">💊</span> Medicines</a>
-      <a data-page="bills"><span class="icon">🧾</span> Bills</a>
+      <a href="#" class="active" data-page="dashboard"><span class="icon"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><rect x="0" y="10" width="8" height="10" rx="2"/><rect x="6" y="5" width="8" height="15" rx="2"/><rect x="12" y="0" width="8" height="20" rx="2"/></svg></span> Dashboard</a>
+      <a href="#" data-page="pos"><span class="icon"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M1 1h3l2.5 10h9l2-7H5.5"/><circle cx="9" cy="17" r="1.5"/><circle cx="14" cy="17" r="1.5"/></svg></span> Point of Sale</a>
+      <a href="#" data-page="medicines"><span class="icon"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 22 22" fill="currentColor"><rect x="7" y="0" width="8" height="22" rx="3"/><rect x="0" y="7" width="22" height="8" rx="3"/></svg></span> Medicines</a>
+      <a href="#" data-page="bills"><span class="icon"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 20 22" fill="currentColor"><rect x="0" y="0" width="20" height="22" rx="3"/><rect x="3" y="5" width="14" height="2" rx="1" fill="white" opacity=".7"/><rect x="3" y="10" width="14" height="2" rx="1" fill="white" opacity=".7"/><rect x="3" y="15" width="8" height="2" rx="1" fill="white" opacity=".7"/></svg></span> Bills</a>
     </nav>
-    <div class="sidebar-footer">Nexffy v1.1 · NexffyDB</div>
+    <div class="sidebar-footer">Logged in as <strong id="sidebarUser">—</strong></div>
   </div>
 
   <div class="main">
@@ -398,7 +539,10 @@
         <span id="offlinePill">⚡ Offline</span>
         <button id="syncPendingBtn" title="Sync queued bills to server">↑ Sync (<span id="syncCount">0</span>)</button>
         <div class="user-pill"><div class="user-ava" id="userInitial">A</div><span id="userBadge">admin</span></div>
-        <button class="btn btn-ghost" id="changePassBtn" style="padding:5px 11px;font-size:.78rem">🔑 Password</button>
+        <button class="btn-theme" id="themeToggleBtn" aria-label="Toggle dark mode" title="Toggle dark mode" onclick="toggleTheme()">
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="btn btn-ghost" id="changePassBtn" style="padding:5px 11px;font-size:.78rem"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Password</button>
         <button class="btn-logout" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -411,19 +555,19 @@
         <button class="period-tab" data-period="month">This Month</button>
       </div>
       <div class="stat-grid">
-        <div class="stat-card blue"><div class="stat-icon">💰</div><div class="stat-body"><div class="val" id="ds-today-sales">—</div><div class="lbl" id="ds-sales-lbl">Today's Sales (PKR)</div></div></div>
-        <div class="stat-card green"><div class="stat-icon">🧾</div><div class="stat-body"><div class="val" id="ds-today-bills">—</div><div class="lbl" id="ds-bills-lbl">Bills Today</div></div></div>
-        <div class="stat-card blue"><div class="stat-icon">📈</div><div class="stat-body"><div class="val" id="ds-total-rev">—</div><div class="lbl">Total Revenue (PKR)</div></div></div>
-        <div class="stat-card blue"><div class="stat-icon">🏦</div><div class="stat-body"><div class="val" id="ds-inv-value">—</div><div class="lbl">Inventory Value (PKR)</div></div></div>
-        <div class="stat-card orange"><div class="stat-icon">⚠️</div><div class="stat-body"><div class="val" id="ds-low-stock">—</div><div class="lbl">Low Stock Items</div></div></div>
-        <div class="stat-card green"><div class="stat-icon">💊</div><div class="stat-body"><div class="val" id="ds-medicines">—</div><div class="lbl">Total Medicines</div></div></div>
-        <div class="stat-card blue"><div class="stat-icon">📋</div><div class="stat-body"><div class="val" id="ds-total-bills">—</div><div class="lbl">Total Bills</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-body"><div class="val" id="ds-today-sales">—</div><div class="lbl" id="ds-sales-lbl">Today's Sales (PKR)</div><div id="ds-sales-delta" style="font-size:.7rem;margin-top:2px"></div></div></div>
+        <div class="stat-card green"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="stat-body"><div class="val" id="ds-today-bills">—</div><div class="lbl" id="ds-bills-lbl">Bills Today</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="stat-body"><div class="val" id="ds-total-rev">—</div><div class="lbl">Total Revenue (PKR)</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="stat-body"><div class="val" id="ds-inv-value">—</div><div class="lbl">Inventory Value (PKR)</div></div></div>
+        <div id="ds-low-stock-card" class="stat-card green" onclick="navigate('medicines')" tabindex="0" role="button" aria-label="View low stock medicines" style="cursor:pointer" title="View medicines"><div class="stat-icon" id="ds-low-stock-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="stat-body"><div class="val" id="ds-low-stock">—</div><div class="lbl">Low Stock Items</div></div></div>
+        <div class="stat-card green"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><div class="stat-body"><div class="val" id="ds-medicines">—</div><div class="lbl">Total Medicines</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6"/><path d="M5 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2H5z"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div><div class="stat-body"><div class="val" id="ds-total-bills">—</div><div class="lbl">Total Bills</div></div></div>
       </div>
       <div class="dash-grid">
         <!-- Revenue chart — full width -->
         <div class="card" style="grid-column:1/-1">
           <div class="card-header"><h3>Revenue — Last 7 Days</h3></div>
-          <div id="revenueChart" style="padding:16px 16px 8px;min-height:80px"></div>
+          <div id="revenueChart" style="padding:16px 16px 8px;min-height:210px;display:flex;align-items:stretch"></div>
         </div>
         <!-- Category donut + Bill status -->
         <div class="card">
@@ -445,15 +589,10 @@
           <table><thead><tr><th>Bill</th><th>Patient</th><th>Amount</th><th>Status</th></tr></thead>
           <tbody id="recentBillsTable"><tr class="loading-row"><td colspan="4"><span class="spinner"></span>Loading…</td></tr></tbody></table>
         </div>
-        <!-- Expiry calendar + Expiring soon -->
+        <!-- Expiring soon (30 days) -->
         <div class="card">
-          <div class="card-header"><h3>Expiry Calendar</h3></div>
+          <div class="card-header"><h3>Expiring ≤ 30 Days</h3></div>
           <div id="expiryCalendar" style="padding:14px;min-height:60px"></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><h3>Expiring Soon <span style="font-size:.72rem;font-weight:400;color:var(--gray-400)">(90 days)</span></h3></div>
-          <table><thead><tr><th>Medicine</th><th>Expiry</th><th>Stock</th></tr></thead>
-          <tbody id="expiryTable"><tr class="loading-row"><td colspan="3"><span class="spinner"></span>Loading…</td></tr></tbody></table>
         </div>
         <!-- Low stock — full width -->
         <div class="card" style="grid-column:1/-1">
@@ -484,7 +623,7 @@
             <input type="text" id="patientCode" placeholder="Auto" autocomplete="off"/>
           </div>
           <div class="cart-items" id="cartItems">
-            <div class="cart-empty">Tap a medicine to add it</div>
+            <div class="cart-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Tap a medicine to add it</div>
           </div>
           <div class="totals-section">
             <div class="tot-row"><span>Subtotal</span><span id="posSubtotal">PKR 0.00</span></div>
@@ -493,7 +632,7 @@
           </div>
           <div class="cart-actions">
             <button class="btn btn-danger" id="clearCartBtn">Clear</button>
-            <button class="btn btn-ghost" id="printCartBtn">🖨 Print</button>
+            <button class="btn btn-ghost" id="printCartBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print</button>
             <button class="btn btn-success" id="saveBillBtn">Save Bill</button>
           </div>
         </div>
@@ -505,13 +644,13 @@
       <div class="form-row">
         <input class="input-lg" type="text" id="medSearch" placeholder="Search name, generic, or code…"/>
         <select id="medCatFilter"><option value="">All Categories</option></select>
-        <button class="btn btn-ghost" id="manageCatBtn">🏷 Categories</button>
+        <button class="btn btn-ghost" id="manageCatBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Categories</button>
         <button class="btn btn-primary" id="addMedBtn">+ Add Medicine</button>
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>Code</th><th>Name</th><th>Generic</th><th>Category</th><th>Unit</th><th>Price</th><th>Stock</th><th>Expiry</th><th>Actions</th></tr></thead>
-          <tbody id="medTableBody"><tr class="loading-row"><td colspan="9"><span class="spinner"></span>Loading…</td></tr></tbody>
+          <thead><tr><th>Code</th><th>Name</th><th>Generic</th><th>Category</th><th>Unit</th><th>Price</th><th>Stock</th><th>Total Value</th><th>Expiry</th><th>Actions</th></tr></thead>
+          <tbody id="medTableBody"><tr class="loading-row"><td colspan="10"><span class="spinner"></span>Loading…</td></tr></tbody>
         </table>
       </div>
       <div class="pagination" id="medPagination"></div>
@@ -537,7 +676,7 @@
 
 <!-- Medicine Modal -->
 <div class="modal-overlay" id="medModal">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="medModalTitle">
     <h3 id="medModalTitle">Add New Medicine</h3>
     <div class="modal-grid">
       <div class="form-col"><label>Code *</label><input id="mCode" placeholder="MED-011" maxlength="50"/></div>
@@ -561,12 +700,12 @@
 
 <!-- Bill Detail Modal -->
 <div class="modal-overlay" id="billModal">
-  <div class="modal modal-wide">
+  <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="billModalTitle">
     <h3 id="billModalTitle">Bill Details</h3>
     <div class="receipt-area" id="billModalBody"></div>
     <div class="modal-actions">
       <button class="btn btn-danger" id="cancelBillBtn" style="margin-right:auto">Cancel Bill</button>
-      <button class="btn btn-primary" id="printBillBtn">🖨 Print Receipt</button>
+      <button class="btn btn-primary" id="printBillBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print Receipt</button>
       <button class="btn btn-ghost" id="closeBillModalBtn">Close</button>
     </div>
   </div>
@@ -574,8 +713,8 @@
 
 <!-- Categories Modal -->
 <div class="modal-overlay" id="catMgmtModal">
-  <div class="modal">
-    <h3>Manage Categories</h3>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="catMgmtModalTitle">
+    <h3 id="catMgmtModalTitle">Manage Categories</h3>
     <div class="form-row">
       <input class="input-lg" type="text" id="newCatInput" placeholder="New category name…" maxlength="100" autocomplete="off"/>
       <button class="btn btn-primary" id="addCatBtn">Add</button>
@@ -589,8 +728,8 @@
 
 <!-- Change Password Modal -->
 <div class="modal-overlay" id="passModal">
-  <div class="modal">
-    <h3>Change Password</h3>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="passModalTitle">
+    <h3 id="passModalTitle">Change Password</h3>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
       <div class="form-col"><label>Current Password</label><input type="password" id="cpCurrent" autocomplete="current-password"/></div>
       <div class="form-col"><label>New Password <span style="font-weight:400;color:var(--gray-400)">(min 8 chars)</span></label><input type="password" id="cpNew" autocomplete="new-password"/></div>
@@ -604,11 +743,49 @@
   </div>
 </div>
 
-<div id="toast"></div>
+<!-- Restock Modal -->
+<div class="modal-overlay" id="restockModal">
+  <div class="modal" style="max-width:340px" role="dialog" aria-modal="true" aria-labelledby="restockModalTitle">
+    <h3 id="restockModalTitle">Restock: <span id="restockName"></span></h3>
+    <div style="margin:10px 0 14px;color:var(--gray-500);font-size:.85rem">Current stock: <strong id="restockCurrent"></strong></div>
+    <div class="form-col"><label for="restockQty">Units to add</label><input type="number" id="restockQty" min="1" step="1" placeholder="e.g. 50"/></div>
+    <div id="restockErr" style="color:var(--danger);font-size:.82rem;margin-top:6px;min-height:16px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="closeRestockBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveRestockBtn">Add Stock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cancel Bill Confirm Modal -->
+<div class="modal-overlay" id="cancelBillModal">
+  <div class="modal" style="max-width:380px" role="dialog" aria-modal="true" aria-labelledby="cancelBillModalTitle">
+    <h3 id="cancelBillModalTitle">Cancel Bill</h3>
+    <div style="margin-bottom:14px">
+      <label for="cancelReasonInput" style="display:block;margin-bottom:6px;font-size:.83rem;font-weight:600;color:var(--tx-2)">Reason <span style="font-weight:400;color:var(--tx-4)">(optional)</span></label>
+      <input type="text" id="cancelReasonInput" placeholder="e.g. Wrong items, patient refused…" maxlength="200"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="closeCancelModalBtn">Keep Bill</button>
+      <button class="btn btn-danger" id="confirmCancelBtn">Cancel Bill</button>
+    </div>
+  </div>
+</div>
+
+<!-- SW Update Banner -->
+<div id="updateBanner" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--bdr);color:var(--tx);border-radius:10px;padding:10px 16px;box-shadow:0 4px 20px rgba(0,0,0,.22);z-index:9999;align-items:center;gap:10px;font-size:.83rem;white-space:nowrap">
+  <span>A new version is ready.</span>
+  <button id="updateReloadBtn" style="background:#4f46e5;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:600;font-size:.83rem">Reload</button>
+  <button id="updateDismissBtn" style="background:none;border:none;color:var(--tx-3);cursor:pointer;padding:0 4px;font-size:1rem;line-height:1">✕</button>
+</div>
+
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 'use strict';
 const API = '/api';
+const POS_PAGE_SIZE = 500;
+const LOW_STOCK_THRESHOLD = 20;
 let allMedicines = [];
 let cart = [];
 let editingMedCode = null;
@@ -618,8 +795,13 @@ let billPage = 1, billTotal = 0;
 const PAGE_SIZE = 20;
 let dashPeriod = 'today';
 
+function debounce(fn, ms) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
 // ── IndexedDB helpers ─────────────────────────────
-const IDB_NAME = 'nexffy_offline', IDB_VER = 1;
+const IDB_NAME = 'nexiffy_offline', IDB_VER = 1;
 let _idb = null;
 
 function openIdb() {
@@ -666,7 +848,7 @@ async function apiFetch(url, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
   const res = await fetch(API + url, { ...opts, headers, credentials: 'include' });
   if (res.status === 401) {
-    localStorage.removeItem('nexffy_cart');
+    localStorage.removeItem('nexiffy_cart');
     showLogin();
     throw new Error('Session expired. Please login again.');
   }
@@ -696,6 +878,7 @@ async function login() {
     if (res.ok) {
       document.getElementById('userBadge').textContent = data.username;
       document.getElementById('userInitial').textContent = (data.username || 'A')[0].toUpperCase();
+      document.getElementById('sidebarUser').textContent = data.username;
       hideLogin();
       initApp();
     } else {
@@ -710,7 +893,8 @@ async function login() {
 
 async function logout() {
   await fetch(API + '/Auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
-  localStorage.removeItem('nexffy_cart');
+  localStorage.removeItem('nexiffy_cart');
+  localStorage.removeItem('nexiffy_install_dismissed');
   showLogin();
 }
 
@@ -774,11 +958,30 @@ async function loadDashboard() {
     // ── Stat cards ──
     const periodLabels = { today: "Today's Sales (PKR)", week: "This Week (PKR)", month: "This Month (PKR)" };
     const billLabels   = { today: 'Bills Today', week: 'Bills This Week', month: 'Bills This Month' };
-    document.getElementById('ds-today-sales').textContent = fmt(d.periodSales);
+    document.getElementById('ds-today-sales').textContent = fmtStat(d.periodSales);
+    // Revenue delta vs yesterday (today period only)
+    const deltaEl = document.getElementById('ds-sales-delta');
+    if (dashPeriod === 'today' && d.dailyRevenue && d.dailyRevenue.length) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const yestStr  = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+      const todayRev = (d.dailyRevenue.find(x => x.date === todayStr) || {}).revenue || 0;
+      const yestRev  = (d.dailyRevenue.find(x => x.date === yestStr)  || {}).revenue || 0;
+      if (yestRev > 0) {
+        const pct = Math.round((todayRev - yestRev) / yestRev * 100);
+        deltaEl.textContent = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}% vs yesterday`;
+        deltaEl.style.color = pct >= 0 ? 'var(--success)' : 'var(--danger)';
+      } else { deltaEl.textContent = ''; }
+    } else { deltaEl.textContent = ''; }
     document.getElementById('ds-today-bills').textContent = d.periodBillCount;
-    document.getElementById('ds-total-rev').textContent   = fmt(d.totalRevenue);
-    document.getElementById('ds-inv-value').textContent   = fmt(d.inventoryValue);
+    document.getElementById('ds-total-rev').textContent   = fmtStat(d.totalRevenue);
+    document.getElementById('ds-inv-value').textContent   = fmtStat(d.inventoryValue);
     document.getElementById('ds-low-stock').textContent   = d.lowStock;
+    const lsCard = document.getElementById('ds-low-stock-card');
+    const lsIcon = document.getElementById('ds-low-stock-icon');
+    lsCard.className = `stat-card ${d.lowStock > 0 ? 'orange' : 'green'}`;
+    lsIcon.innerHTML = d.lowStock > 0
+      ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+      : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     document.getElementById('ds-medicines').textContent   = d.totalMedicines;
     document.getElementById('ds-total-bills').textContent = d.totalBills;
     document.getElementById('ds-sales-lbl').textContent   = periodLabels[dashPeriod] || "Sales (PKR)";
@@ -790,12 +993,12 @@ async function loadDashboard() {
     renderRevenueChart(d.dailyRevenue || []);
     renderCategoryDonut(d.salesByCategory || []);
     renderBillStatus(d.savedCount, d.cancelledCount);
-    renderExpiryCalendar(d.expiryCalendar || []);
+    renderExpiryCalendar(d.expiryCalendar || [], d.expiringMeds || []);
 
     // ── Top medicines ──
     document.getElementById('topMedTable').innerHTML = d.topMedicines.length
-      ? d.topMedicines.map((m, i) => `<tr><td>${i+1}</td><td>${h(m.medicineName)}</td><td><strong>${h(String(m.totalQty))}</strong></td></tr>`).join('')
-      : '<tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:12px">No sales yet</td></tr>';
+      ? d.topMedicines.map((m, i) => `<tr><td style="color:var(--gray-400);font-weight:600">${i+1}</td><td>${h(m.medicineName)}</td><td><span style="background:var(--primary-subtle);color:var(--primary);padding:2px 9px;border-radius:12px;font-size:.78rem;font-weight:700">${h(String(m.totalQty))}</span></td></tr>`).join('')
+      : '<tr><td colspan="3"><div class="chart-empty" style="padding:20px 0"><span class="chart-empty-icon" style="font-size:1.5rem">🏆</span>No sales yet this period</div></td></tr>';
 
     // ── Recent bills ──
     document.getElementById('recentBillsTable').innerHTML = d.recentBills.length
@@ -805,16 +1008,7 @@ async function loadDashboard() {
           <td>PKR ${h(fmt(b.totalAmount))}</td>
           <td><span class="badge badge-${b.status === 'Cancelled' ? 'cancelled' : 'saved'}">${h(b.status)}</span></td>
         </tr>`).join('')
-      : '<tr><td colspan="4" style="text-align:center;color:var(--gray-400);padding:12px">No bills yet</td></tr>';
-
-    // ── Expiring soon ──
-    document.getElementById('expiryTable').innerHTML = d.expiringMeds.length
-      ? d.expiringMeds.map(m => `<tr>
-          <td>${h(m.name)}</td>
-          <td style="color:${isExpiringSoon(m.expiryDate) ? 'var(--danger)' : 'inherit'}">${h(m.expiryDate || '—')}</td>
-          <td>${h(String(m.stock))}</td>
-        </tr>`).join('')
-      : '<tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:12px">None</td></tr>';
+      : '<tr><td colspan="4"><div class="chart-empty" style="padding:20px 0"><span class="chart-empty-icon" style="font-size:1.5rem">🧾</span>No bills recorded yet</div></td></tr>';
 
     // ── Low stock ──
     const ls = await apiFetch('/Medicines/low-stock?threshold=20');
@@ -826,7 +1020,7 @@ async function loadDashboard() {
           <td><span class="badge badge-low">${h(String(m.stock))}</span></td>
           <td>${h(m.unit)}</td>
         </tr>`).join('')
-      : '<tr><td colspan="3" style="text-align:center;color:var(--success);padding:12px">All stock levels OK</td></tr>';
+      : '<tr><td colspan="3"><div class="chart-empty" style="padding:20px 0;color:var(--success)"><span class="chart-empty-icon" style="font-size:1.5rem">✅</span>All stock levels are healthy</div></td></tr>';
   } catch (e) {
     if (e.message !== 'Session expired. Please login again.')
       showToast('Cannot load dashboard', true);
@@ -838,7 +1032,6 @@ function renderRevenueChart(data) {
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
 
-  // Build a full 7-day array filling gaps with 0
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now); d.setDate(now.getDate() - i);
@@ -847,29 +1040,62 @@ function renderRevenueChart(data) {
     days.push({ date: ds, revenue: found ? found.revenue : 0 });
   }
 
+  if (!days.some(d => d.revenue > 0)) {
+    el.innerHTML = `<div class="chart-empty" style="flex:1">
+      <svg width="80" height="60" viewBox="0 0 80 60" fill="none" style="margin-bottom:12px;opacity:.25">
+        <rect x="4" y="30" width="12" height="26" rx="3" fill="#4f46e5"/>
+        <rect x="22" y="18" width="12" height="38" rx="3" fill="#4f46e5"/>
+        <rect x="40" y="10" width="12" height="46" rx="3" fill="#4f46e5"/>
+        <rect x="58" y="22" width="12" height="34" rx="3" fill="#4f46e5"/>
+        <line x1="0" y1="59" x2="80" y2="59" stroke="#4f46e5" stroke-width="1.5"/>
+      </svg>
+      <div style="font-weight:600;color:var(--gray-500);margin-bottom:4px">No revenue yet</div>
+      <div style="font-size:.78rem;color:var(--gray-400)">Save your first bill to see the revenue trend</div>
+    </div>`;
+    return;
+  }
+
   const maxRev = Math.max(...days.map(d => d.revenue), 1);
-  const BAR_W = 38, GAP = 14, H = 110, AXIS_H = 20, PAD_TOP = 22;
+  const BAR_W = 36, GAP = 16, H = 128, AXIS_H = 34, PAD_TOP = 28, PAD_L = 8;
   const totalW = days.length * (BAR_W + GAP) - GAP;
-  const W = totalW + 20;
+  const W = totalW + PAD_L * 2;
   const dayAbbr = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dk = document.documentElement.getAttribute('data-theme') === 'dark';
+  const clrLbl = dk ? '#7284a0' : '#64748b';
+  const clrDt  = dk ? '#4a5472' : '#94a3b8';
+  const clrLine= dk ? '#282d45' : '#e2e8f0';
+  const barOA  = dk ? '#2d3252' : '#e2e8f0';
+  const barOB  = dk ? '#1e2340' : '#cbd5e1';
 
   const bars = days.map((d, i) => {
-    const barH = Math.max(3, (d.revenue / maxRev) * H);
-    const x = 10 + i * (BAR_W + GAP);
+    const barH = Math.max(4, (d.revenue / maxRev) * H);
+    const x = PAD_L + i * (BAR_W + GAP);
     const y = PAD_TOP + H - barH;
+    const cx = x + BAR_W / 2;
     const isToday = d.date === todayStr;
-    const fill = isToday ? '#2563eb' : '#e2e8f0';
-    const textFill = isToday ? '#2563eb' : '#94a3b8';
     const label = d.revenue >= 1000 ? (d.revenue / 1000).toFixed(1) + 'k' : String(Math.round(d.revenue));
+    const dn = dayAbbr[new Date(d.date + 'T12:00:00').getDay()];
+    const dateNum = new Date(d.date + 'T12:00:00').getDate();
     return `
-      <rect x="${x}" y="${y}" width="${BAR_W}" height="${barH}" rx="5" fill="${fill}"/>
-      ${d.revenue > 0 ? `<text x="${x + BAR_W/2}" y="${y - 5}" text-anchor="middle" font-size="9" fill="${textFill}" font-weight="600">${label}</text>` : ''}
-      <text x="${x + BAR_W/2}" y="${PAD_TOP + H + AXIS_H - 4}" text-anchor="middle" font-size="10" fill="${isToday ? '#2563eb' : '#64748b'}" font-weight="${isToday ? '700' : '400'}">${dayAbbr[new Date(d.date + 'T12:00:00').getDay()]}</text>
+      <rect x="${x}" y="${y}" width="${BAR_W}" height="${barH}" rx="7" fill="url(#${isToday ? 'barGT' : 'barGO'})"/>
+      ${d.revenue > 0 ? `<text x="${cx}" y="${y - 7}" text-anchor="middle" font-size="9" fill="${isToday ? '#6366f1' : clrLbl}" font-weight="700">${label}</text>` : ''}
+      <text x="${cx}" y="${PAD_TOP + H + 16}" text-anchor="middle" font-size="10" fill="${isToday ? '#4f46e5' : clrLbl}" font-weight="${isToday ? '700' : '500'}">${dn}</text>
+      <text x="${cx}" y="${PAD_TOP + H + 27}" text-anchor="middle" font-size="9" fill="${isToday ? '#a5b4fc' : clrDt}">${dateNum}</text>
     `;
   }).join('');
 
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${PAD_TOP + H + AXIS_H}" style="width:100%;max-height:165px;display:block">
-    <line x1="0" y1="${PAD_TOP + H}" x2="${W}" y2="${PAD_TOP + H}" stroke="#e2e8f0" stroke-width="1"/>
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${PAD_TOP + H + AXIS_H}" style="width:100%;max-height:210px;display:block;flex:1">
+    <defs>
+      <linearGradient id="barGT" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#6366f1"/>
+        <stop offset="100%" stop-color="#4338ca"/>
+      </linearGradient>
+      <linearGradient id="barGO" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${barOA}"/>
+        <stop offset="100%" stop-color="${barOB}"/>
+      </linearGradient>
+    </defs>
+    <line x1="${PAD_L}" y1="${PAD_TOP + H}" x2="${W - PAD_L}" y2="${PAD_TOP + H}" stroke="${clrLine}" stroke-width="1"/>
     ${bars}
   </svg>`;
 }
@@ -877,49 +1103,62 @@ function renderRevenueChart(data) {
 function renderCategoryDonut(data) {
   const el = document.getElementById('categoryDonut');
   if (!data.length) {
-    el.innerHTML = '<p class="chart-empty">No sales data for this period</p>';
+    el.innerHTML = `<div class="chart-empty">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style="margin-bottom:12px;opacity:.25">
+        <circle cx="32" cy="32" r="28" stroke="#4f46e5" stroke-width="8" stroke-dasharray="40 10 25 10 15 200" stroke-linecap="round"/>
+        <circle cx="32" cy="32" r="14" fill="var(--surface)"/>
+      </svg>
+      <div style="font-weight:600;color:var(--gray-500);margin-bottom:4px">No sales yet</div>
+      <div style="font-size:.78rem;color:var(--gray-400)">Category breakdown will appear here</div>
+    </div>`;
     return;
   }
-  const colors = ['#2563eb','#059669','#d97706','#dc2626','#7c3aed','#0891b2'];
+  const colors = ['#4f46e5','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#ec4899'];
   const total = data.reduce((s, x) => s + x.revenue, 0);
-  const R = 60, r = 36, CX = 80, CY = 80;
+  const R = 62, r = 39, CX = 80, CY = 80;
 
   let slicesSvg = '';
   if (data.length === 1) {
-    // Full circle for single category
     slicesSvg = `<circle cx="${CX}" cy="${CY}" r="${R}" fill="${colors[0]}"/>`;
   } else {
+    const GAP = 0.04;
     let angle = -Math.PI / 2;
     slicesSvg = data.map((d, i) => {
       const frac = d.revenue / total;
-      const a1 = angle, a2 = angle + frac * 2 * Math.PI;
-      angle = a2;
+      const span = frac * 2 * Math.PI - GAP;
+      if (span <= 0) return '';
+      const a1 = angle + GAP / 2, a2 = a1 + span;
+      angle = angle + frac * 2 * Math.PI;
       const x1 = CX + R * Math.cos(a1), y1 = CY + R * Math.sin(a1);
       const x2 = CX + R * Math.cos(a2), y2 = CY + R * Math.sin(a2);
       const xi1 = CX + r * Math.cos(a1), yi1 = CY + r * Math.sin(a1);
       const xi2 = CX + r * Math.cos(a2), yi2 = CY + r * Math.sin(a2);
       const lg = frac > 0.5 ? 1 : 0;
-      return `<path d="M${x1},${y1} A${R},${R},0,${lg},1,${x2},${y2} L${xi2},${yi2} A${r},${r},0,${lg},0,${xi1},${yi1} Z" fill="${colors[i % colors.length]}" opacity=".92"/>`;
+      return `<path d="M${x1},${y1} A${R},${R},0,${lg},1,${x2},${y2} L${xi2},${yi2} A${r},${r},0,${lg},0,${xi1},${yi1} Z" fill="${colors[i % colors.length]}"/>`;
     }).join('');
   }
 
   const totalLabel = total >= 1000 ? (total / 1000).toFixed(1) + 'k' : String(Math.round(total));
-  const legend = data.map((d, i) => `
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-      <div style="width:10px;height:10px;border-radius:3px;background:${colors[i % colors.length]};flex-shrink:0"></div>
+  const legend = data.map((d, i) => {
+    const pct = Math.round(d.revenue / total * 100);
+    return `
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+      <div style="width:9px;height:9px;border-radius:2px;background:${colors[i % colors.length]};flex-shrink:0"></div>
       <span style="font-size:.73rem;color:var(--gray-600);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(d.category)}</span>
-      <span style="font-size:.72rem;font-weight:700;color:var(--gray-700)">PKR ${Math.round(d.revenue).toLocaleString()}</span>
-    </div>`).join('');
+      <span style="font-size:.68rem;color:var(--gray-400);font-weight:600;flex-shrink:0">${pct}%</span>
+      <span style="font-size:.71rem;font-weight:700;color:var(--gray-700);flex-shrink:0">PKR ${Math.round(d.revenue).toLocaleString()}</span>
+    </div>`;
+  }).join('');
 
   el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-      <svg viewBox="0 0 160 160" style="width:110px;height:110px;flex-shrink:0">
+    <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+      <svg viewBox="0 0 160 160" style="width:120px;height:120px;flex-shrink:0">
         ${slicesSvg}
-        <circle cx="${CX}" cy="${CY}" r="${r}" fill="white"/>
-        <text x="${CX}" y="${CY - 5}" text-anchor="middle" font-size="9" fill="#94a3b8">Total</text>
-        <text x="${CX}" y="${CY + 9}" text-anchor="middle" font-size="10" fill="#334155" font-weight="bold">PKR ${totalLabel}</text>
+        <circle cx="${CX}" cy="${CY}" r="${r - 1}" fill="var(--surface)"/>
+        <text x="${CX}" y="${CY - 6}" text-anchor="middle" font-size="8.5" fill="var(--tx-3)" font-weight="500">Total</text>
+        <text x="${CX}" y="${CY + 8}" text-anchor="middle" font-size="9.5" fill="var(--tx)" font-weight="700">PKR ${totalLabel}</text>
       </svg>
-      <div style="flex:1;min-width:120px">${legend}</div>
+      <div style="flex:1;min-width:130px;padding-top:4px">${legend}</div>
     </div>`;
 }
 
@@ -945,52 +1184,35 @@ function renderBillStatus(saved, cancelled) {
     </div>` : ''}`;
 }
 
-function renderExpiryCalendar(data) {
+function renderExpiryCalendar(calData, expiringMeds) {
   const el = document.getElementById('expiryCalendar');
   const now = new Date();
-  const year = now.getFullYear(), month = now.getMonth();
-  const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfWeek = new Date(year, month, 1).getDay();
-  const todayDay = now.getDate();
-
-  const countMap = {};
-  (data || []).forEach(x => { countMap[x.date] = x.count; });
-
-  const monthPad = String(month + 1).padStart(2, '0');
-  const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-  const header = dayNames.map(d => `<div style="text-align:center;font-size:.65rem;font-weight:700;color:var(--gray-400);padding:3px 0">${d}</div>`).join('');
-
-  let cells = Array(firstDayOfWeek).fill('<div></div>');
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${year}-${monthPad}-${String(day).padStart(2, '0')}`;
-    const count = countMap[dateStr] || 0;
-    const isToday = day === todayDay;
-    let bg = 'transparent', color = 'var(--gray-600)', border = isToday ? '2px solid var(--primary)' : 'none';
-    if (count >= 4) { bg = '#dc2626'; color = '#fff'; }
-    else if (count >= 2) { bg = '#d97706'; color = '#fff'; }
-    else if (count === 1) { bg = '#fef3c7'; color = '#d97706'; }
-    else if (isToday) { bg = '#dbeafe'; color = '#2563eb'; }
-    cells.push(`<div title="${count > 0 ? count + ' medicine(s) expiring' : dateStr}" style="text-align:center;font-size:.72rem;padding:4px 1px;border-radius:5px;background:${bg};color:${color};border:${border};font-weight:${isToday || count > 0 ? '700' : '400'};cursor:${count > 0 ? 'help' : 'default'}">${day}</div>`);
+  const thirtyDaysStr = new Date(now.getTime() + 30 * 864e5).toISOString().slice(0, 10);
+  const urgent = (expiringMeds || []).filter(m => m.expiryDate && m.expiryDate <= thirtyDaysStr);
+  if (!urgent.length) {
+    el.innerHTML = '<div class="chart-empty" style="color:var(--success)"><span class="chart-empty-icon" style="font-size:1.6rem">🌿</span>No medicines expiring in the next 30 days</div>';
+    return;
   }
-
-  el.innerHTML = `
-    <div style="font-size:.79rem;font-weight:700;color:var(--gray-700);margin-bottom:8px;text-align:center">${monthName}</div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${header}${cells.join('')}</div>
-    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
-      <span style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--gray-400)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#fef3c7"></span>1 expiring</span>
-      <span style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--gray-400)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#d97706"></span>2–3</span>
-      <span style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--gray-400)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#dc2626"></span>4+</span>
+  el.innerHTML = urgent.map(m => {
+    const daysLeft = Math.ceil((new Date(m.expiryDate) - now) / 864e5);
+    const color = daysLeft <= 7 ? 'var(--danger)' : daysLeft <= 14 ? '#dc6803' : '#a16207';
+    const bg = daysLeft <= 7 ? 'var(--danger-light)' : daysLeft <= 14 ? 'var(--warning-light)' : 'var(--surface-2)';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;margin-bottom:5px;border-radius:8px;background:${bg}">
+      <div><div style="font-weight:600;font-size:.82rem;color:var(--gray-800)">${h(m.name)}</div><div style="font-size:.71rem;color:var(--gray-500)">Stock: ${h(String(m.stock))}</div></div>
+      <div style="text-align:right;flex-shrink:0;margin-left:8px"><div style="font-size:.77rem;color:${color};font-weight:700">${h(m.expiryDate)}</div><div style="font-size:.67rem;color:${color};font-weight:600">${daysLeft}d left</div></div>
     </div>`;
+  }).join('');
 }
 
 // ── POS ───────────────────────────────────────────
 async function loadPosMedicines() {
   if (!allMedicines.length) {
     try {
-      const res = await apiFetch('/Medicines?pageSize=500');
+      const res = await apiFetch(`/Medicines?pageSize=${POS_PAGE_SIZE}`);
       const d = await res.json();
       allMedicines = d.items;
+      if (d.total > d.items.length)
+        showToast(`Showing ${d.items.length} of ${d.total} medicines — catalog exceeds limit`, true);
       idbPutAll('medicines', allMedicines).catch(() => {});
     } catch (e) {
       if (e.message === 'Session expired. Please login again.') return;
@@ -1013,24 +1235,32 @@ function filterPosMeds() {
   const cat = document.getElementById('posCatFilter').value;
   renderPosMeds(allMedicines.filter(m =>
     (!cat || m.category === cat) &&
-    (!q || m.name.toLowerCase().includes(q) || m.genericName.toLowerCase().includes(q) || m.code.toLowerCase().includes(q))
+    (!q || m.name.toLowerCase().includes(q) || m.genericName?.toLowerCase().includes(q) || m.code.toLowerCase().includes(q))
   ));
 }
 
 function renderPosMeds(list) {
   const grid = document.getElementById('posMedGrid');
   if (!list.length) {
-    grid.innerHTML = '<div style="color:var(--gray-400);grid-column:1/-1;text-align:center;padding:30px">No medicines found</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1"><div class="chart-empty"><span class="chart-empty-icon">💊</span>No medicines match your search</div></div>';
     return;
   }
-  grid.innerHTML = list.map(m => `
+  const now = new Date();
+  const thirtyDays = new Date(now.getTime() + 30 * 864e5);
+  grid.innerHTML = list.map(m => {
+    const expiring = m.expiryDate && new Date(m.expiryDate) <= thirtyDays && new Date(m.expiryDate) >= now;
+    const stockColor = m.stock < 10 ? 'var(--danger)' : m.stock < 30 ? '#d97706' : 'var(--gray-600)';
+    const stockBold = m.stock < 30;
+    return `
     <div class="med-card${m.stock <= 0 ? ' out-of-stock' : ''}" data-code="${h(m.code)}" title="${h(m.name)}">
+      ${expiring ? `<div style="background:#fef9c3;color:#854d0e;font-size:.65rem;font-weight:700;padding:2px 6px;border-radius:4px;margin-bottom:4px;text-align:center">⚠ Expires ${h(m.expiryDate)}</div>` : ''}
       <div class="mcat">${h(m.category)}</div>
       <div class="mname">${h(m.name)}</div>
       <div class="mgen">${h(m.genericName)}</div>
       <div class="mprice">PKR ${h(fmt(m.price))}</div>
-      <div class="mstock">Stock: ${h(m.stock.toString())} ${h(m.unit)}${m.stock < 20 && m.stock > 0 ? ' <span class="badge badge-low">Low</span>' : ''}</div>
-    </div>`).join('');
+      <div class="mstock" style="color:${stockColor};font-weight:${stockBold ? '700' : '400'}">Stock: ${h(m.stock.toString())} ${h(m.unit)}${m.stock < 20 && m.stock > 0 ? ' <span class="badge badge-low">Low</span>' : ''}</div>
+    </div>`;
+  }).join('');
 }
 
 // Event delegation — no inline onclick, prevents injection
@@ -1120,7 +1350,7 @@ function removeFromCart(code) {
 function renderCart() {
   const el = document.getElementById('cartItems');
   if (!cart.length) {
-    el.innerHTML = '<div class="cart-empty">Tap a medicine to add it</div>';
+    el.innerHTML = '<div class="cart-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Tap a medicine to add it</div>';
     updatePosTotals(); return;
   }
   el.innerHTML = cart.map(i => `
@@ -1128,7 +1358,7 @@ function renderCart() {
       <div><div class="cn">${h(i.name)}</div><div class="cs">${h(i.code)} · ${h(i.unit)} · PKR ${h(fmt(i.rate))}</div></div>
       <div class="qty-ctrl">
         <button class="qty-minus">−</button>
-        <input type="number" class="qty-input" data-cartcode="${h(i.code)}" value="${h(i.qty.toString())}" min="1" step="1"/>
+        <input type="number" class="qty-input" aria-label="Quantity for ${h(i.name)}" data-cartcode="${h(i.code)}" value="${h(i.qty.toString())}" min="1" step="1"/>
         <button class="qty-plus">+</button>
       </div>
       <div class="ca">PKR ${h(fmt(i.amount))}</div>
@@ -1176,13 +1406,16 @@ function clearCart() {
   saveCart(); renderCart();
 }
 
+let _isSaving = false;
 async function saveBill() {
+  if (_isSaving) return;
   if (!cart.length) { showToast('Cart is empty', true); return; }
   const patientName = document.getElementById('patientName').value.trim() || 'Walk-in Patient';
   const patientCode = document.getElementById('patientCode').value.trim() || 'WALK-IN';
   const discount = parseFloat(document.getElementById('posDiscount').value) || 0;
   const sub = cart.reduce((s, i) => s + i.amount, 0);
 
+  if (discount < 0) { showToast('Discount cannot be negative', true); return; }
   if (discount > sub) { showToast('Discount cannot exceed subtotal', true); return; }
 
   const bill = {
@@ -1193,6 +1426,7 @@ async function saveBill() {
   };
 
   const btn = document.getElementById('saveBillBtn');
+  _isSaving = true;
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
     const res = await apiFetch('/Bills', { method: 'POST', body: JSON.stringify(bill) });
@@ -1208,15 +1442,16 @@ async function saveBill() {
   } catch (e) {
     if (e.message === 'Session expired. Please login again.') return;
     // Queue the bill locally and sync when server is available
-    const localId = 'LOCAL-' + Date.now();
+    const localId = 'LOCAL-' + crypto.randomUUID();
     await idbPut('pendingBills', { ...bill, localId, queuedAt: new Date().toISOString() })
       .then(() => {
-        showToast(`Offline — bill queued (will sync automatically)`, false, false);
+        showToast('Offline — bill queued (will sync automatically)', false, false);
         clearCart();
         updateSyncBadge();
       })
       .catch(() => showToast('Network error — check server', true));
   } finally {
+    _isSaving = false;
     btn.disabled = false; btn.textContent = 'Save Bill';
   }
 }
@@ -1234,7 +1469,7 @@ async function updateSyncBadge() {
 async function syncPendingBills() {
   const pending = await idbGetAll('pendingBills').catch(() => []);
   if (!pending.length) return;
-  let synced = 0, failed = 0;
+  let synced = 0, rejected = 0, failed = 0;
   for (const bill of pending) {
     const { localId, queuedAt, ...serverBill } = bill;
     try {
@@ -1243,7 +1478,15 @@ async function syncPendingBills() {
         await idbDel('pendingBills', localId);
         synced++;
         allMedicines = [];
-      } else { failed++; }
+      } else if (res.status < 500) {
+        // 4xx = permanent rejection (bad data, insufficient stock, etc.)
+        // Drop from queue so it doesn't block future syncs indefinitely
+        await idbDel('pendingBills', localId);
+        rejected++;
+      } else {
+        failed++;
+        break; // 5xx = server error, stop and retry later
+      }
     } catch { failed++; break; }  // server still unreachable — stop trying
   }
   updateSyncBadge();
@@ -1252,7 +1495,8 @@ async function syncPendingBills() {
     loadPosMedicines();
     if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
   }
-  if (failed > 0) showToast(`${failed} bill(s) failed to sync — will retry`, true);
+  if (rejected > 0) showToast(`${rejected} queued bill(s) rejected by server (insufficient stock or invalid items) and removed from queue`, true);
+  if (failed > 0) showToast(`${failed} bill(s) could not sync — will retry when server is available`, true);
 }
 
 window.addEventListener('online',  () => {
@@ -1266,10 +1510,10 @@ window.addEventListener('offline', () => {
 document.getElementById('syncPendingBtn').addEventListener('click', syncPendingBills);
 
 // ── Cart persistence ───────────────────────────────
-function saveCart() { localStorage.setItem('nexffy_cart', JSON.stringify(cart)); }
+function saveCart() { localStorage.setItem('nexiffy_cart', JSON.stringify(cart)); }
 function loadCart() {
   try {
-    const raw = JSON.parse(localStorage.getItem('nexffy_cart') || '[]');
+    const raw = JSON.parse(localStorage.getItem('nexiffy_cart') || '[]');
     cart = Array.isArray(raw)
       ? raw.filter(i => i && typeof i.code === 'string' && i.code.length > 0 && i.qty > 0 && i.rate > 0)
       : [];
@@ -1284,13 +1528,13 @@ async function loadMedicines() {
   if (search) url += `&search=${encodeURIComponent(search)}`;
   if (cat) url += `&category=${encodeURIComponent(cat)}`;
   const tbody = document.getElementById('medTableBody');
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="9"><span class="spinner"></span>Loading…</td></tr>';
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="10"><span class="spinner"></span>Loading…</td></tr>';
   try {
     const res = await apiFetch(url);
     const { items: meds, total } = await res.json();
     medTotal = total;
     if (!meds.length) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:18px;color:var(--gray-400)">No medicines found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:18px;color:var(--gray-400)">No medicines found</td></tr>';
     } else {
       tbody.innerHTML = meds.map(m => `
         <tr>
@@ -1300,10 +1544,12 @@ async function loadMedicines() {
           <td><span class="badge badge-cat">${h(m.category)}</span></td>
           <td>${h(m.unit)}</td>
           <td>PKR ${h(fmt(m.price))}</td>
-          <td>${m.stock < 20 ? `<span class="badge badge-low">${h(m.stock.toString())}</span>` : h(m.stock.toString())}</td>
+          <td><span style="padding:2px 9px;border-radius:12px;font-size:.78rem;font-weight:700;color:#fff;background:${m.stock < 10 ? 'var(--danger)' : m.stock < 30 ? '#f59e0b' : 'var(--success)'}">${h(m.stock.toString())}</span></td>
+          <td style="font-weight:600;color:var(--gray-700)">PKR ${fmtStat(m.price * m.stock)}</td>
           <td style="color:${isExpiringSoon(m.expiryDate) ? 'var(--danger)' : 'inherit'}">${h(m.expiryDate || '—')}</td>
           <td>
             <button class="btn btn-sm btn-primary" data-edit="${h(m.code)}">Edit</button>
+            <button class="btn btn-sm btn-ghost" data-restock="${h(m.code)}" data-stockname="${h(m.name)}" data-stockcur="${h(m.stock.toString())}">+Stock</button>
             <button class="btn btn-sm btn-danger" data-delete="${h(m.code)}">Del</button>
           </td>
         </tr>`).join('');
@@ -1313,20 +1559,22 @@ async function loadMedicines() {
     if (e.message !== 'Session expired. Please login again.') {
       showToast('Cannot load medicines', true);
       document.getElementById('medTableBody').innerHTML =
-        '<tr><td colspan="9" style="text-align:center;padding:18px;color:var(--danger)">Error loading medicines — check server</td></tr>';
+        '<tr><td colspan="10" style="text-align:center;padding:18px;color:var(--danger)">Error loading medicines — check server</td></tr>';
     }
   }
 }
 
 // Event delegation for medicine table actions
 document.getElementById('medTableBody').addEventListener('click', async e => {
-  const editBtn = e.target.closest('[data-edit]');
-  const delBtn = e.target.closest('[data-delete]');
-  if (editBtn) openEditMedicine(editBtn.dataset.edit);
-  if (delBtn) deleteMedicine(delBtn.dataset.delete);
+  const editBtn    = e.target.closest('[data-edit]');
+  const delBtn     = e.target.closest('[data-delete]');
+  const restockBtn = e.target.closest('[data-restock]');
+  if (editBtn)    openEditMedicine(editBtn.dataset.edit);
+  if (delBtn)     deleteMedicine(delBtn.dataset.delete);
+  if (restockBtn) openRestockModal(restockBtn.dataset.restock, restockBtn.dataset.stockname, parseInt(restockBtn.dataset.stockcur));
 });
 
-document.getElementById('medSearch').addEventListener('input', () => { medPage = 1; loadMedicines(); });
+document.getElementById('medSearch').addEventListener('input', debounce(() => { medPage = 1; loadMedicines(); }, 300));
 document.getElementById('medCatFilter').addEventListener('change', () => { medPage = 1; loadMedicines(); });
 
 async function loadCategories() {
@@ -1342,7 +1590,7 @@ async function loadCategories() {
     });
     const dl = document.getElementById('catList');
     if (dl) dl.innerHTML = cats.map(c => `<option value="${h(c)}">`).join('');
-  } catch {}
+  } catch { showToast('Could not load categories', true); }
 }
 
 function isExpiringSoon(date) {
@@ -1404,6 +1652,7 @@ document.getElementById('medSaveBtn').addEventListener('click', async () => {
   };
   if (!med.code || !med.name || !med.price) { showToast('Code, Name and Price are required', true); return; }
   if (!/^[A-Za-z0-9]([A-Za-z0-9\-]{0,48}[A-Za-z0-9])?$/.test(med.code)) { showToast('Code must start/end with alphanumeric; hyphens allowed in the middle only', true); return; }
+  if (med.expiryDate && new Date(med.expiryDate) < new Date() && !confirm('Expiry date is in the past. Save anyway?')) return;
 
   const url = editingMedCode ? `/Medicines/${encodeURIComponent(editingMedCode)}` : '/Medicines';
   const method = editingMedCode ? 'PUT' : 'POST';
@@ -1455,7 +1704,7 @@ async function loadBills() {
           <td style="font-weight:700;color:var(--primary);cursor:pointer" data-view="${h(b.id)}">${h(b.id)}</td>
           <td>${h(b.patientName)} <span style="color:var(--gray-400);font-size:.72rem">${h(b.patientCode)}</span></td>
           <td>${h(b.date)}</td>
-          <td style="color:var(--gray-400)">${b.items.length} item${b.items.length !== 1 ? 's' : ''}</td>
+          <td style="color:var(--gray-400)">${(b.items||[]).length} item${(b.items||[]).length !== 1 ? 's' : ''}</td>
           <td><strong>PKR ${h(fmt(b.totalAmount))}</strong></td>
           <td>${b.discount > 0 ? `PKR ${h(fmt(b.discount))}` : '—'}</td>
           <td><span class="badge badge-${b.status === 'Cancelled' ? 'cancelled' : 'saved'}">${h(b.status)}</span></td>
@@ -1480,12 +1729,14 @@ document.getElementById('billTableBody').addEventListener('click', async e => {
   const printEl = e.target.closest('[data-print]');
   if (viewEl) viewBill(viewEl.dataset.view);
   if (printEl) {
-    const res = await apiFetch(`/Bills/${encodeURIComponent(printEl.dataset.print)}`);
-    printReceipt(await res.json());
+    try {
+      const res = await apiFetch(`/Bills/${encodeURIComponent(printEl.dataset.print)}`);
+      printReceipt(await res.json());
+    } catch { showToast('Could not load bill for printing', true); }
   }
 });
 
-document.getElementById('billPatient').addEventListener('input', () => { billPage = 1; loadBills(); });
+document.getElementById('billPatient').addEventListener('input', debounce(() => { billPage = 1; loadBills(); }, 300));
 document.getElementById('billDate').addEventListener('change', () => { billPage = 1; loadBills(); });
 document.getElementById('clearBillFilterBtn').addEventListener('click', () => {
   document.getElementById('billPatient').value = '';
@@ -1530,18 +1781,31 @@ document.getElementById('closeBillModalBtn').addEventListener('click', () => {
   currentBill = null;
 });
 
-document.getElementById('cancelBillBtn').addEventListener('click', async () => {
+document.getElementById('cancelBillBtn').addEventListener('click', () => {
   if (!currentBill) return;
-  const reason = prompt(`Reason for cancelling ${currentBill.id}:`);
-  if (reason === null) return;
+  document.getElementById('cancelReasonInput').value = '';
+  document.getElementById('cancelBillModal').classList.add('open');
+  setTimeout(() => document.getElementById('cancelReasonInput').focus(), 100);
+});
+
+document.getElementById('closeCancelModalBtn').addEventListener('click', () => {
+  document.getElementById('cancelBillModal').classList.remove('open');
+});
+
+document.getElementById('confirmCancelBtn').addEventListener('click', async () => {
+  if (!currentBill) return;
+  const reason = document.getElementById('cancelReasonInput').value.trim() || 'No reason given';
+  const btn = document.getElementById('confirmCancelBtn');
+  btn.disabled = true; btn.textContent = 'Cancelling…';
   try {
     const res = await apiFetch(`/Bills/${encodeURIComponent(currentBill.id)}/cancel`, {
       method: 'PUT',
-      body: JSON.stringify({ reason: reason || 'No reason given' })
+      body: JSON.stringify({ reason })
     });
     const d = await res.json();
     if (res.ok) {
       showToast('Bill cancelled & stock restored', false, true);
+      document.getElementById('cancelBillModal').classList.remove('open');
       document.getElementById('billModal').classList.remove('open');
       currentBill = null;
       allMedicines = [];
@@ -1550,6 +1814,7 @@ document.getElementById('cancelBillBtn').addEventListener('click', async () => {
       showToast(d.message || 'Failed to cancel', true);
     }
   } catch { showToast('Network error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Cancel Bill'; }
 });
 
 document.getElementById('printBillBtn').addEventListener('click', () => {
@@ -1593,7 +1858,7 @@ function printReceipt(b) {
     ${b.discount > 0 ? `<div class="row"><span>Discount:</span><span>PKR ${Number(b.discount).toFixed(2)}</span></div>` : ''}
     <div class="row total"><span>TOTAL:</span><span>PKR ${Number(b.totalAmount).toFixed(2)}</span></div>
     <hr/>
-    <p style="text-align:center;font-size:9px">Thank you for your purchase<br/>Nexffy Pharmacy POS</p>
+    <p style="text-align:center;font-size:9px">Thank you for your purchase<br/>Nexiffy Pharmacy POS</p>
   </body></html>`);
   w.document.close();
   w.focus();
@@ -1732,13 +1997,17 @@ function renderPagination(containerId, currentPage, total, onPageChange) {
 function fmt(n) {
   return Number(n).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+// Stat cards: no decimals (353,000 not 353,000.00)
+function fmtStat(n) {
+  return Number(n).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
 
 function showToast(msg, isErr = false, isOk = false) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = isErr ? 'err show' : isOk ? 'ok show' : 'show';
   clearTimeout(t._tid);
-  t._tid = setTimeout(() => { t.className = ''; }, 3000);
+  t._tid = setTimeout(() => { t.className = ''; }, 4000);
 }
 
 // ── Init ───────────────────────────────────────────
@@ -1759,11 +2028,16 @@ if ('serviceWorker' in navigator) {
         const w = reg.installing;
         w.addEventListener('statechange', () => {
           if (w.state === 'installed' && navigator.serviceWorker.controller)
-            showToast('App updated — reload to get the latest version');
+            document.getElementById('updateBanner').style.display = 'flex';
         });
       });
     })
     .catch(() => {});
+
+  document.getElementById('updateReloadBtn').addEventListener('click', () => window.location.reload());
+  document.getElementById('updateDismissBtn').addEventListener('click', () => {
+    document.getElementById('updateBanner').style.display = 'none';
+  });
 }
 
 // ── PWA install prompt ────────────────────────────
@@ -1771,7 +2045,7 @@ let _installEvent = null;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   _installEvent = e;
-  if (!localStorage.getItem('nexffy_install_dismissed'))
+  if (!localStorage.getItem('nexiffy_install_dismissed'))
     document.getElementById('installBanner').classList.add('show');
 });
 document.getElementById('installBtn').addEventListener('click', async () => {
@@ -1783,11 +2057,87 @@ document.getElementById('installBtn').addEventListener('click', async () => {
 });
 document.getElementById('dismissInstallBtn').addEventListener('click', () => {
   document.getElementById('installBanner').classList.remove('show');
-  localStorage.setItem('nexffy_install_dismissed', '1');
+  localStorage.setItem('nexiffy_install_dismissed', '1');
 });
 window.addEventListener('appinstalled', () => {
   document.getElementById('installBanner').classList.remove('show');
-  showToast('Nexffy POS installed successfully!', false, true);
+  showToast('Nexiffy POS installed successfully!', false, true);
+});
+
+// ── Restock ───────────────────────────────────────
+let restockingCode = null;
+function openRestockModal(code, name, currentStock) {
+  restockingCode = code;
+  document.getElementById('restockName').textContent = name;
+  document.getElementById('restockCurrent').textContent = currentStock;
+  document.getElementById('restockQty').value = '';
+  document.getElementById('restockErr').textContent = '';
+  document.getElementById('restockModal').classList.add('open');
+  setTimeout(() => document.getElementById('restockQty').focus(), 100);
+}
+document.getElementById('closeRestockBtn').addEventListener('click', () => {
+  document.getElementById('restockModal').classList.remove('open');
+  restockingCode = null;
+});
+document.getElementById('restockQty').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('saveRestockBtn').click();
+});
+document.getElementById('saveRestockBtn').addEventListener('click', async () => {
+  const qty = parseInt(document.getElementById('restockQty').value);
+  const errEl = document.getElementById('restockErr');
+  if (!qty || qty < 1) { errEl.textContent = 'Enter a valid quantity'; return; }
+  try {
+    const res = await apiFetch(`/Medicines/${encodeURIComponent(restockingCode)}/stock`, {
+      method: 'PUT', body: JSON.stringify({ adjustment: qty })
+    });
+    if (res.ok) {
+      document.getElementById('restockModal').classList.remove('open');
+      restockingCode = null;
+      allMedicines = [];
+      loadMedicines();
+      showToast(`+${qty} units added to stock`, false, true);
+    } else {
+      const d = await res.json();
+      errEl.textContent = d.message || 'Failed to update stock';
+    }
+  } catch { errEl.textContent = 'Network error'; }
+});
+
+// ── Global keyboard shortcuts ─────────────────────
+const _escMap = {
+  medModal: 'closeMedModalBtn', billModal: 'closeBillModalBtn',
+  catMgmtModal: 'closeCatMgmtBtn', passModal: 'closePassModalBtn',
+  restockModal: 'closeRestockBtn', cancelBillModal: 'closeCancelModalBtn',
+};
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  if ((e.key === '/' || e.key === 'F2') && !isInput) {
+    e.preventDefault();
+    const activePage = document.querySelector('.page.active');
+    if (!activePage || activePage.id !== 'page-pos') navigate('pos');
+    focusPosSearch();
+  }
+  if (e.key === 'Escape') {
+    const open = document.querySelector('.modal-overlay.open');
+    if (open) { const b = _escMap[open.id]; if (b) document.getElementById(b)?.click(); }
+  }
+});
+
+// Low-stock card keyboard activation
+document.getElementById('ds-low-stock-card').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('medicines'); }
+});
+
+// ── POS keyboard: Enter → save bill ──────────────
+document.getElementById('patientName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('patientCode').focus();
+});
+document.getElementById('patientCode').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveBill();
+});
+document.getElementById('posDiscount').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveBill();
 });
 
 // ── Boot ──────────────────────────────────────────
@@ -1800,21 +2150,23 @@ document.getElementById('loginUser').addEventListener('keydown', e => {
 (async () => {
   try {
     const res = await fetch(API + '/Auth/me', { credentials: 'include' });
+    if (!res.ok) { showLogin(); return; }
     const data = await res.json();
-    if (res.ok && data.username) {
+    if (data.username) {
       // Authenticated — either live from server or cached by SW
       document.getElementById('userBadge').textContent = data.username;
-      document.getElementById('userInitial').textContent = data.username[0].toUpperCase();
+      document.getElementById('userInitial').textContent = (data.username || 'A')[0].toUpperCase();
+      document.getElementById('sidebarUser').textContent = data.username;
       hideLogin();
       initApp();
       // Offline session (SW served cached response, server unreachable)
-      if (data.username && !navigator.onLine)
+      if (!navigator.onLine)
         showToast('Running offline — bills will sync when server is back');
     } else {
       showLogin();
     }
   } catch {
-    // No cached session and server unreachable
+    // Genuine network error — server truly unreachable
     showLogin();
     document.getElementById('loginError').textContent =
       navigator.onLine
@@ -1822,6 +2174,26 @@ document.getElementById('loginUser').addEventListener('keydown', e => {
         : 'Offline and no cached session. Connect to the server once to enable offline mode.';
   }
 })();
+
+// ── Theme toggle ──────────────────────────────────
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('nexiffy_theme', next);
+  updateThemeBtn(next);
+  // Re-render charts with new colors
+  if (typeof loadDashboard === 'function') loadDashboard();
+}
+function updateThemeBtn(theme) {
+  const btn = document.getElementById('themeToggleBtn');
+  if (!btn) return;
+  const isDark = theme === 'dark';
+  btn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+  btn.innerHTML = isDark
+    ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+    : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+}
+updateThemeBtn(document.documentElement.getAttribute('data-theme') || 'light');
 </script>
 </body>
 </html>

@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Nexffy.Data;
-using Nexffy.Models;
+using Nexiffy.Data;
+using Nexiffy.Models;
 
-namespace Nexffy.Controllers
+namespace Nexiffy.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -64,16 +64,23 @@ namespace Nexffy.Controllers
                 string.Compare(b.Date, startDate) >= 0 &&
                 string.Compare(b.Date, today) <= 0);
 
-            // ── Sales by category (period, in-memory join) ─────────
-            var billItems = await periodQuery.SelectMany(b => b.Items).ToListAsync();
-            var medCodes  = billItems.Select(i => i.MedicineCode).Distinct().ToList();
-            var medCatMap = await _context.Medicines.IgnoreQueryFilters()
-                .Where(m => medCodes.Contains(m.Code))
-                .ToDictionaryAsync(m => m.Code, m => string.IsNullOrEmpty(m.Category) ? "Other" : m.Category);
+            // ── Sales by category — GROUP BY in SQL, category lookup in memory ──
+            // Groups by medicine code in SQL (one row per code) instead of loading all items
+            var revByCode = await periodQuery
+                .SelectMany(b => b.Items)
+                .GroupBy(i => i.MedicineCode)
+                .Select(g => new { code = g.Key, revenue = g.Sum(i => i.Amount) })
+                .ToListAsync();
 
-            var salesByCategory = billItems
-                .GroupBy(i => medCatMap.TryGetValue(i.MedicineCode, out var c) ? c : "Other")
-                .Select(g => new { category = g.Key, revenue = Math.Round(g.Sum(i => i.Amount), 2) })
+            var soldCodes = revByCode.Select(x => x.code).ToList();
+            var catMap = await _context.Medicines.IgnoreQueryFilters()
+                .Where(m => soldCodes.Contains(m.Code))
+                .Select(m => new { m.Code, Cat = m.Category == null || m.Category == "" ? "Other" : m.Category })
+                .ToDictionaryAsync(m => m.Code, m => m.Cat);
+
+            var salesByCategory = revByCode
+                .GroupBy(x => catMap.TryGetValue(x.code, out var cat) ? cat : "Other")
+                .Select(g => new { category = g.Key, revenue = Math.Round(g.Sum(x => x.revenue), 2) })
                 .OrderByDescending(x => x.revenue)
                 .Take(6)
                 .ToList();

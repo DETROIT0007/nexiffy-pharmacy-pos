@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Nexffy.Controllers
+namespace Nexiffy.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

@@ -4,4 +4,6 @@ obj/
 .vs/
 server.log
 server.err
+server_err.log
+appsettings.json
 appsettings.Development.json

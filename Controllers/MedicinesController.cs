@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Nexffy.Data;
-using Nexffy.Models;
+using Nexiffy.Data;
+using Nexiffy.Models;
 
-namespace Nexffy.Controllers
+namespace Nexiffy.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -161,21 +161,37 @@ namespace Nexffy.Controllers
         [HttpPut("{code}/stock")]
         public async Task<IActionResult> AdjustStock(string code, [FromBody] StockAdjustRequest req)
         {
-            var med = await _context.Medicines.FirstOrDefaultAsync(m => m.Code == code);
-            if (med == null) return NotFound();
-            if (med.Stock + req.Adjustment < 0)
-                return BadRequest(new { message = "Stock cannot go below zero" });
+            if (req.Adjustment < -100_000 || req.Adjustment > 100_000)
+                return BadRequest(new { message = "Adjustment must be between -100,000 and 100,000" });
 
-            var oldStock = med.Stock;
-            med.Stock += req.Adjustment;
-            med.LastUpdated = DateTime.Now;
-            await _context.SaveChangesAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var med = await _context.Medicines.FirstOrDefaultAsync(m => m.Code == code);
+                if (med == null) return NotFound();
+                if (med.Stock + req.Adjustment < 0)
+                    return BadRequest(new { message = "Stock cannot go below zero" });
+                if (med.Stock + req.Adjustment > 100_000)
+                    return BadRequest(new { message = "Adjusted stock cannot exceed 100,000" });
 
-            _logger.LogInformation(
-                "Stock adjustment for '{Code}' by {User}: {Old} -> {New} (delta {Delta})",
-                code, User.Identity?.Name, oldStock, med.Stock, req.Adjustment);
+                var oldStock = med.Stock;
+                med.Stock += req.Adjustment;
+                med.LastUpdated = DateTime.Now;
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
-            return Ok(new { code = med.Code, newStock = med.Stock });
+                _logger.LogInformation(
+                    "Stock adjustment for '{Code}' by {User}: {Old} -> {New} (delta {Delta})",
+                    code, User.Identity?.Name, oldStock, med.Stock, req.Adjustment);
+
+                return Ok(new { code = med.Code, newStock = med.Stock });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Failed to adjust stock for '{Code}'", code);
+                return StatusCode(500, new { message = "Failed to adjust stock. Please try again." });
+            }
         }
     }
 
