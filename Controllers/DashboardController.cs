@@ -19,7 +19,8 @@ namespace Nexiffy.Controllers
         {
             var now = DateTime.Now;
             var today = now.ToString("yyyy-MM-dd");
-            var ninetyDays = now.AddDays(90).ToString("yyyy-MM-dd");
+            var thirtyDaysStr  = now.AddDays(30).ToString("yyyy-MM-dd");
+            var fourteenDaysAgo = now.AddDays(-13).ToString("yyyy-MM-dd");
 
             var startDate = period switch
             {
@@ -47,12 +48,31 @@ namespace Nexiffy.Controllers
             var medValues  = await _context.Medicines.Select(m => new { m.Price, m.Stock }).ToListAsync();
             var inventoryValue = medValues.Sum(m => m.Price * m.Stock);
 
-            // ── Daily revenue — last 7 days ────────────────────────
+            // ── Daily revenue + bill counts — last 7 days ─────────
             var sevenDaysAgo = now.AddDays(-6).ToString("yyyy-MM-dd");
             var dailyRevenue = await _context.Bills
                 .Where(b => b.Status != BillStatus.Cancelled &&
                             string.Compare(b.Date, sevenDaysAgo) >= 0 &&
                             string.Compare(b.Date, today) <= 0)
+                .GroupBy(b => b.Date)
+                .Select(g => new { date = g.Key, revenue = g.Sum(b => b.TotalAmount) })
+                .OrderBy(x => x.date)
+                .ToListAsync();
+
+            var dailyBillCounts = await _context.Bills
+                .Where(b => b.Status != BillStatus.Cancelled &&
+                            string.Compare(b.Date, sevenDaysAgo) >= 0 &&
+                            string.Compare(b.Date, today) <= 0)
+                .GroupBy(b => b.Date)
+                .Select(g => new { date = g.Key, count = g.Count() })
+                .OrderBy(x => x.date)
+                .ToListAsync();
+
+            // ── Previous week revenue (ghost bar comparison) ───────
+            var previousWeekRevenue = await _context.Bills
+                .Where(b => b.Status != BillStatus.Cancelled &&
+                            string.Compare(b.Date, fourteenDaysAgo) >= 0 &&
+                            string.Compare(b.Date, sevenDaysAgo) < 0)
                 .GroupBy(b => b.Date)
                 .Select(g => new { date = g.Key, revenue = g.Sum(b => b.TotalAmount) })
                 .OrderBy(x => x.date)
@@ -117,17 +137,17 @@ namespace Nexiffy.Controllers
             var expiringMeds = await _context.Medicines
                 .Where(m => m.ExpiryDate != null &&
                     string.Compare(m.ExpiryDate, today) >= 0 &&
-                    string.Compare(m.ExpiryDate, ninetyDays) <= 0)
+                    string.Compare(m.ExpiryDate, thirtyDaysStr) <= 0)
                 .OrderBy(m => m.ExpiryDate)
-                .Take(5)
-                .Select(m => new { m.Name, m.ExpiryDate, m.Stock })
+                .Take(50)
+                .Select(m => new { m.Name, m.ExpiryDate, m.Stock, m.Code })
                 .ToListAsync();
 
             return Ok(new {
                 period, startDate, today,
                 periodSales, periodBillCount,
                 totalRevenue, totalMedicines, lowStock, totalBills, inventoryValue,
-                dailyRevenue, salesByCategory,
+                dailyRevenue, dailyBillCounts, previousWeekRevenue, salesByCategory,
                 savedCount = periodBillCount, cancelledCount,
                 expiryCalendar,
                 topMedicines, recentBills, expiringMeds

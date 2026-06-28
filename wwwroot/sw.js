@@ -1,7 +1,7 @@
 'use strict';
 
-const SHELL = 'nexiffy-shell-v17';
-const DATA  = 'nexiffy-data-v17';
+const SHELL = 'nexiffy-shell-v24';
+const DATA  = 'nexiffy-data-v24';
 
 const SHELL_FILES = ['/', '/manifest.json', '/icon.svg'];
 

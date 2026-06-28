@@ -245,6 +245,9 @@
     .stat-card.orange .stat-icon{background:var(--warning-light);color:var(--warning)}
     .stat-card.red{border-top-color:var(--danger)}
     .stat-card.red .stat-icon{background:var(--danger-light);color:var(--danger)}
+    .stat-card.purple{border-top-color:#8b5cf6}
+    .stat-card.purple .stat-icon{background:#ede9fe;color:#7c3aed}
+    [data-theme="dark"] .stat-card.purple .stat-icon{background:#2e1f5e;color:#a78bfa}
 
     /* ── Cards / Tables ────────────────────────── */
     .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--bdr);overflow:hidden;margin-bottom:16px;transition:background .25s,border-color .25s,box-shadow .2s}
@@ -409,11 +412,50 @@
     .spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--bdr-in);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
     @keyframes spin{to{transform:rotate(360deg)}}
 
+    /* ── Animations ─────────────────────────────── */
+    @keyframes fadeSlideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+    @keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+    @keyframes slideInRight{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+    @keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+    @keyframes rippleAnim{to{transform:scale(4);opacity:0}}
+
+    /* Stat cards stagger */
+    .stat-card{animation:fadeSlideUp .45s cubic-bezier(.22,1,.36,1) both}
+    .stat-card:nth-child(1){animation-delay:0ms}
+    .stat-card:nth-child(2){animation-delay:55ms}
+    .stat-card:nth-child(3){animation-delay:110ms}
+    .stat-card:nth-child(4){animation-delay:165ms}
+    .stat-card:nth-child(5){animation-delay:220ms}
+    .stat-card:nth-child(6){animation-delay:275ms}
+    .stat-card:nth-child(7){animation-delay:330ms}
+
+    /* Bar chart grow from bottom */
+    .animated-bar{transform-box:fill-box;transform-origin:center bottom;animation:barGrow .55s cubic-bezier(.34,1.26,.64,1) both}
+
+    /* Cart row slide-in */
+    .cart-row{animation:slideInRight .2s ease both}
+
+    /* Button ripple */
+    .btn{position:relative;overflow:hidden}
+    .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.28);transform:scale(0);animation:rippleAnim .5s linear;pointer-events:none}
+
     /* ── Sidebar overlay ────────────────────────── */
     .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(8,12,28,.6);z-index:99;backdrop-filter:blur(3px)}
 
     /* ── Dashboard grid ─────────────────────────── */
-    .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+    .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    @media(max-width:700px){.dash-grid{grid-template-columns:1fr}}
+    /* ── Sparklines ─────────────────────────────── */
+    .spark-wrap{margin-top:6px;line-height:0;opacity:.75}
+    /* ── Expiry bands ───────────────────────────── */
+    .expiry-band-hdr{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:6px 0 4px;display:flex;align-items:center;gap:6px;color:var(--gray-500)}
+    .expiry-row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;margin-bottom:4px;border-radius:8px}
+    /* ── Daily target bar ───────────────────────── */
+    .target-bar-wrap{padding:12px 16px 14px;border-top:1px solid var(--bdr);margin-top:4px}
+    .target-bar-track{background:var(--bg);border-radius:20px;height:8px;overflow:hidden;margin-top:6px}
+    .target-bar-fill{height:100%;border-radius:20px;transition:width .6s ease;background:linear-gradient(90deg,var(--primary),var(--success))}
+    /* ── Last refreshed ─────────────────────────── */
+    .dash-refresh{font-size:.69rem;color:var(--gray-400);text-align:right;margin:-6px 0 14px;user-select:none}
 
     /* ── Period Tabs ─────────────────────────────── */
     .period-tabs{display:inline-flex;gap:2px;margin-bottom:16px;background:var(--bdr-th);border-radius:10px;padding:3px}
@@ -462,9 +504,24 @@
       .content{padding:12px 14px}
       .topbar{padding:0 14px}
     }
+
+    /* ── Print receipt overlay ───────────────────── */
+    #print-overlay{display:none}
+    @media print{
+      body>*:not(#print-overlay){display:none!important}
+      #print-overlay{display:block!important;font-family:monospace;font-size:11px;padding:10px;max-width:280px}
+      #print-overlay h2,#print-overlay h3{text-align:center;margin:4px 0}
+      #print-overlay hr{border:none;border-top:1px dashed #000;margin:6px 0}
+      #print-overlay .pr{display:flex;justify-content:space-between}
+      #print-overlay table{width:100%;border-collapse:collapse}
+      #print-overlay td,#print-overlay th{padding:2px 4px;font-size:10px}
+      #print-overlay th{border-bottom:1px solid #000}
+      #print-overlay .total{font-weight:bold}
+    }
   </style>
 </head>
 <body>
+<div id="print-overlay"></div>
 
 <!-- ── Install Banner ────────────────────────────── -->
 <div id="installBanner">
@@ -549,14 +606,22 @@
 
     <!-- DASHBOARD -->
     <div class="content page active" id="page-dashboard">
-      <div class="period-tabs">
-        <button class="period-tab active" data-period="today">Today</button>
-        <button class="period-tab" data-period="week">This Week</button>
-        <button class="period-tab" data-period="month">This Month</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div class="period-tabs">
+          <button class="period-tab active" data-period="today">Today</button>
+          <button class="period-tab" data-period="week">This Week</button>
+          <button class="period-tab" data-period="month">This Month</button>
+        </div>
+        <button class="btn btn-sm btn-ghost" id="endOfDayBtn" style="font-size:.75rem" title="End-of-day summary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Day Summary
+        </button>
       </div>
+      <div class="dash-refresh" id="ds-refreshed"></div>
       <div class="stat-grid">
-        <div class="stat-card blue"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-body"><div class="val" id="ds-today-sales">—</div><div class="lbl" id="ds-sales-lbl">Today's Sales (PKR)</div><div id="ds-sales-delta" style="font-size:.7rem;margin-top:2px"></div></div></div>
-        <div class="stat-card green"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="stat-body"><div class="val" id="ds-today-bills">—</div><div class="lbl" id="ds-bills-lbl">Bills Today</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-body"><div class="val" id="ds-today-sales">—</div><div class="lbl" id="ds-sales-lbl">Today's Sales (PKR)</div><div id="ds-sales-delta" style="font-size:.7rem;margin-top:2px"></div><div class="spark-wrap" id="ds-sales-spark"></div></div></div>
+        <div class="stat-card green"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="stat-body"><div class="val" id="ds-today-bills">—</div><div class="lbl" id="ds-bills-lbl">Bills Today</div><div class="spark-wrap" id="ds-bills-spark"></div></div></div>
+        <div class="stat-card purple"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><circle cx="18" cy="6" r="3" fill="none"/><path d="M18 4v4M16 6h4" stroke-width="1.5"/></svg></div><div class="stat-body"><div class="val" id="ds-avg-bill">—</div><div class="lbl">Avg Bill Value (PKR)</div><div class="spark-wrap" id="ds-avg-spark"></div></div></div>
         <div class="stat-card blue"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="stat-body"><div class="val" id="ds-total-rev">—</div><div class="lbl">Total Revenue (PKR)</div></div></div>
         <div class="stat-card blue"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="stat-body"><div class="val" id="ds-inv-value">—</div><div class="lbl">Inventory Value (PKR)</div></div></div>
         <div id="ds-low-stock-card" class="stat-card green" onclick="navigate('medicines')" tabindex="0" role="button" aria-label="View low stock medicines" style="cursor:pointer" title="View medicines"><div class="stat-icon" id="ds-low-stock-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="stat-body"><div class="val" id="ds-low-stock">—</div><div class="lbl">Low Stock Items</div></div></div>
@@ -568,6 +633,16 @@
         <div class="card" style="grid-column:1/-1">
           <div class="card-header"><h3>Revenue — Last 7 Days</h3></div>
           <div id="revenueChart" style="padding:16px 16px 8px;min-height:210px;display:flex;align-items:stretch"></div>
+          <div class="target-bar-wrap" id="ds-target-wrap">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <span id="ds-target-label" style="font-size:.72rem;color:var(--gray-500)">Daily Target</span>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span id="ds-target-pct" style="font-size:.72rem;font-weight:700;color:var(--primary)"></span>
+                <button class="btn btn-sm btn-ghost" id="ds-set-target-btn" style="font-size:.7rem;padding:2px 8px">Set</button>
+              </div>
+            </div>
+            <div class="target-bar-track"><div class="target-bar-fill" id="ds-target-fill" style="width:0%"></div></div>
+          </div>
         </div>
         <!-- Category donut + Bill status -->
         <div class="card">
@@ -594,11 +669,13 @@
           <div class="card-header"><h3>Expiring ≤ 30 Days</h3></div>
           <div id="expiryCalendar" style="padding:14px;min-height:60px"></div>
         </div>
-        <!-- Low stock — full width -->
-        <div class="card" style="grid-column:1/-1">
+        <!-- Low stock -->
+        <div class="card">
           <div class="card-header"><h3>Low Stock Alert</h3><button class="btn btn-sm btn-ghost" onclick="navigate('medicines')">Manage</button></div>
-          <table><thead><tr><th>Medicine</th><th>Stock</th><th>Unit</th></tr></thead>
-          <tbody id="lowStockTable"><tr class="loading-row"><td colspan="3"><span class="spinner"></span>Loading…</td></tr></tbody></table>
+          <div style="max-height:280px;overflow-y:auto">
+            <table><thead><tr><th>Medicine</th><th>Stock</th><th>Unit</th><th></th></tr></thead>
+            <tbody id="lowStockTable"><tr class="loading-row"><td colspan="4"><span class="spinner"></span>Loading…</td></tr></tbody></table>
+          </div>
         </div>
       </div>
     </div>
@@ -707,6 +784,18 @@
       <button class="btn btn-danger" id="cancelBillBtn" style="margin-right:auto">Cancel Bill</button>
       <button class="btn btn-primary" id="printBillBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print Receipt</button>
       <button class="btn btn-ghost" id="closeBillModalBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- End-of-Day Modal -->
+<div class="modal-overlay" id="eodModal">
+  <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="eodModalTitle">
+    <h3 id="eodModalTitle">Day Summary</h3>
+    <div id="eodBody" style="padding:4px 0 8px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="eodPrintBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print Report</button>
+      <button class="btn btn-ghost" id="closeEodBtn">Close</button>
     </div>
   </div>
 </div>
@@ -950,16 +1039,41 @@ document.querySelector('.period-tabs').addEventListener('click', e => {
   loadDashboard();
 });
 
+let _dashLastRefresh = 0;
+let _lastDashData = null;
+
+function drawSparkline(values, color) {
+  if (!values || values.length < 2) return '';
+  const max = Math.max(...values, 1);
+  const W = 64, H = 22;
+  const pts = values.map((v, i) => `${(i / (values.length - 1)) * W},${H - (v / max) * (H - 2) - 1}`).join(' ');
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function fillSparkDays(apiArr, key) {
+  const now = new Date();
+  return Array.from({length: 7}, (_, i) => {
+    const d = new Date(now); d.setDate(now.getDate() - (6 - i));
+    const ds = d.toISOString().slice(0, 10);
+    const found = apiArr.find(x => x.date === ds);
+    return found ? (found[key] ?? 0) : 0;
+  });
+}
+
 async function loadDashboard() {
   try {
     const res = await apiFetch(`/Dashboard?period=${dashPeriod}`);
     const d = await res.json();
+    _lastDashData = d;
 
     // ── Stat cards ──
     const periodLabels = { today: "Today's Sales (PKR)", week: "This Week (PKR)", month: "This Month (PKR)" };
     const billLabels   = { today: 'Bills Today', week: 'Bills This Week', month: 'Bills This Month' };
-    document.getElementById('ds-today-sales').textContent = fmtStat(d.periodSales);
-    // Revenue delta vs yesterday (today period only)
+    animateCounter(document.getElementById('ds-today-sales'), d.periodSales, v => fmtStat(v));
+
+    // Revenue delta vs yesterday
     const deltaEl = document.getElementById('ds-sales-delta');
     if (dashPeriod === 'today' && d.dailyRevenue && d.dailyRevenue.length) {
       const todayStr = new Date().toISOString().slice(0, 10);
@@ -972,25 +1086,41 @@ async function loadDashboard() {
         deltaEl.style.color = pct >= 0 ? 'var(--success)' : 'var(--danger)';
       } else { deltaEl.textContent = ''; }
     } else { deltaEl.textContent = ''; }
-    document.getElementById('ds-today-bills').textContent = d.periodBillCount;
-    document.getElementById('ds-total-rev').textContent   = fmtStat(d.totalRevenue);
-    document.getElementById('ds-inv-value').textContent   = fmtStat(d.inventoryValue);
-    document.getElementById('ds-low-stock').textContent   = d.lowStock;
+
+    // Sparklines
+    const revVals   = fillSparkDays(d.dailyRevenue    || [], 'revenue');
+    const billVals  = fillSparkDays(d.dailyBillCounts || [], 'count');
+    const avgVals   = revVals.map((r, i) => billVals[i] > 0 ? r / billVals[i] : 0);
+    document.getElementById('ds-sales-spark').innerHTML = drawSparkline(revVals,  '#4f46e5');
+    document.getElementById('ds-bills-spark').innerHTML = drawSparkline(billVals, '#10b981');
+    document.getElementById('ds-avg-spark').innerHTML   = drawSparkline(avgVals,  '#7c3aed');
+
+    // Avg bill value
+    const avgBill = d.periodBillCount > 0 ? d.periodSales / d.periodBillCount : 0;
+    animateCounter(document.getElementById('ds-avg-bill'), avgBill, v => fmtStat(v));
+
+    animateCounter(document.getElementById('ds-today-bills'), d.periodBillCount, v => String(Math.round(v)));
+    animateCounter(document.getElementById('ds-total-rev'),   d.totalRevenue,    v => fmtStat(v));
+    animateCounter(document.getElementById('ds-inv-value'),   d.inventoryValue,  v => fmtStat(v));
+    animateCounter(document.getElementById('ds-low-stock'),   d.lowStock,        v => String(Math.round(v)));
     const lsCard = document.getElementById('ds-low-stock-card');
     const lsIcon = document.getElementById('ds-low-stock-icon');
     lsCard.className = `stat-card ${d.lowStock > 0 ? 'orange' : 'green'}`;
     lsIcon.innerHTML = d.lowStock > 0
       ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
       : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-    document.getElementById('ds-medicines').textContent   = d.totalMedicines;
-    document.getElementById('ds-total-bills').textContent = d.totalBills;
+    animateCounter(document.getElementById('ds-medicines'),   d.totalMedicines, v => String(Math.round(v)));
+    animateCounter(document.getElementById('ds-total-bills'), d.totalBills,     v => String(Math.round(v)));
     document.getElementById('ds-sales-lbl').textContent   = periodLabels[dashPeriod] || "Sales (PKR)";
     document.getElementById('ds-bills-lbl').textContent   = billLabels[dashPeriod]   || 'Bills';
     const pLbl = { today: 'Today', week: 'This Week', month: 'This Month' };
     document.getElementById('ds-period-label').textContent = pLbl[dashPeriod] || '';
 
+    // Daily target progress bar
+    updateTargetBar(d.periodSales);
+
     // ── Charts ──
-    renderRevenueChart(d.dailyRevenue || []);
+    renderRevenueChart(d.dailyRevenue || [], d.previousWeekRevenue || []);
     renderCategoryDonut(d.salesByCategory || []);
     renderBillStatus(d.savedCount, d.cancelledCount);
     renderExpiryCalendar(d.expiryCalendar || [], d.expiringMeds || []);
@@ -1000,7 +1130,7 @@ async function loadDashboard() {
       ? d.topMedicines.map((m, i) => `<tr><td style="color:var(--gray-400);font-weight:600">${i+1}</td><td>${h(m.medicineName)}</td><td><span style="background:var(--primary-subtle);color:var(--primary);padding:2px 9px;border-radius:12px;font-size:.78rem;font-weight:700">${h(String(m.totalQty))}</span></td></tr>`).join('')
       : '<tr><td colspan="3"><div class="chart-empty" style="padding:20px 0"><span class="chart-empty-icon" style="font-size:1.5rem">🏆</span>No sales yet this period</div></td></tr>';
 
-    // ── Recent bills ──
+    // ── Recent bills (with relative time) ──
     document.getElementById('recentBillsTable').innerHTML = d.recentBills.length
       ? d.recentBills.map(b => `<tr>
           <td style="color:var(--primary);font-weight:700;cursor:pointer" onclick="viewBill('${h(b.id)}')">${h(b.id)}</td>
@@ -1019,15 +1149,57 @@ async function loadDashboard() {
           <td>${h(m.name)}</td>
           <td><span class="badge badge-low">${h(String(m.stock))}</span></td>
           <td>${h(m.unit)}</td>
+          <td style="text-align:right;padding-right:12px">
+            <button class="btn btn-sm btn-ghost" data-restock="${h(m.code)}" data-name="${h(m.name)}" data-stock="${h(String(m.stock))}"
+              style="font-size:.72rem;padding:2px 8px;color:var(--success);border-color:var(--success)">+Stock</button>
+          </td>
         </tr>`).join('')
-      : '<tr><td colspan="3"><div class="chart-empty" style="padding:20px 0;color:var(--success)"><span class="chart-empty-icon" style="font-size:1.5rem">✅</span>All stock levels are healthy</div></td></tr>';
+      : '<tr><td colspan="4"><div class="chart-empty" style="padding:20px 0;color:var(--success)"><span class="chart-empty-icon" style="font-size:1.5rem">✅</span>All stock levels are healthy</div></td></tr>';
+
+    // ── Last refreshed ──
+    _dashLastRefresh = Date.now();
+    document.getElementById('ds-refreshed').textContent = 'Updated just now';
   } catch (e) {
     if (e.message !== 'Session expired. Please login again.')
       showToast('Cannot load dashboard', true);
   }
 }
 
-function renderRevenueChart(data) {
+// Relative time ticker
+setInterval(() => {
+  if (!_dashLastRefresh) return;
+  const mins = Math.round((Date.now() - _dashLastRefresh) / 60000);
+  const el = document.getElementById('ds-refreshed');
+  if (el) el.textContent = mins < 1 ? 'Updated just now' : `Updated ${mins} min ago`;
+}, 30000);
+
+// Daily target helpers
+function updateTargetBar(sales) {
+  const target = Number(localStorage.getItem('nexiffy_daily_target') || 0);
+  const wrap = document.getElementById('ds-target-wrap');
+  if (!target) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const pct = Math.min(Math.round((sales / target) * 100), 100);
+  document.getElementById('ds-target-fill').style.width = pct + '%';
+  const lbl = `PKR ${Math.round(sales).toLocaleString()} / ${Math.round(target).toLocaleString()} today`;
+  document.getElementById('ds-target-label').textContent = lbl;
+  document.getElementById('ds-target-pct').textContent   = pct + '%';
+}
+
+document.getElementById('ds-set-target-btn').addEventListener('click', () => {
+  const cur = localStorage.getItem('nexiffy_daily_target') || '';
+  const val = prompt('Set daily revenue target (PKR):\nLeave blank to disable.', cur);
+  if (val === null) return;
+  const n = parseFloat(val.trim());
+  if (!val.trim() || isNaN(n) || n <= 0) {
+    localStorage.removeItem('nexiffy_daily_target');
+  } else {
+    localStorage.setItem('nexiffy_daily_target', String(n));
+  }
+  updateTargetBar(_lastDashData?.periodSales ?? 0);
+});
+
+function renderRevenueChart(data, prevData) {
   const el = document.getElementById('revenueChart');
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
@@ -1037,7 +1209,11 @@ function renderRevenueChart(data) {
     const d = new Date(now); d.setDate(now.getDate() - i);
     const ds = d.toISOString().slice(0, 10);
     const found = data.find(x => x.date === ds);
-    days.push({ date: ds, revenue: found ? found.revenue : 0 });
+    // Previous week: same index offset from 14 days ago
+    const prevDate = new Date(now); prevDate.setDate(now.getDate() - i - 7);
+    const prevDs = prevDate.toISOString().slice(0, 10);
+    const prevFound = (prevData || []).find(x => x.date === prevDs);
+    days.push({ date: ds, revenue: found ? found.revenue : 0, prevRev: prevFound ? prevFound.revenue : 0 });
   }
 
   if (!days.some(d => d.revenue > 0)) {
@@ -1055,7 +1231,7 @@ function renderRevenueChart(data) {
     return;
   }
 
-  const maxRev = Math.max(...days.map(d => d.revenue), 1);
+  const maxRev = Math.max(...days.map(d => d.revenue), ...days.map(d => d.prevRev), 1);
   const BAR_W = 36, GAP = 16, H = 128, AXIS_H = 34, PAD_TOP = 28, PAD_L = 8;
   const totalW = days.length * (BAR_W + GAP) - GAP;
   const W = totalW + PAD_L * 2;
@@ -1066,19 +1242,24 @@ function renderRevenueChart(data) {
   const clrLine= dk ? '#282d45' : '#e2e8f0';
   const barOA  = dk ? '#2d3252' : '#e2e8f0';
   const barOB  = dk ? '#1e2340' : '#cbd5e1';
+  const ghostA = dk ? 'rgba(99,102,241,.15)' : 'rgba(99,102,241,.12)';
 
   const bars = days.map((d, i) => {
     const barH = Math.max(4, (d.revenue / maxRev) * H);
+    const prevH = d.prevRev > 0 ? Math.max(2, (d.prevRev / maxRev) * H) : 0;
     const x = PAD_L + i * (BAR_W + GAP);
     const y = PAD_TOP + H - barH;
+    const prevY = PAD_TOP + H - prevH;
     const cx = x + BAR_W / 2;
     const isToday = d.date === todayStr;
     const label = d.revenue >= 1000 ? (d.revenue / 1000).toFixed(1) + 'k' : String(Math.round(d.revenue));
     const dn = dayAbbr[new Date(d.date + 'T12:00:00').getDay()];
     const dateNum = new Date(d.date + 'T12:00:00').getDate();
+    const delay = `${i * 65}ms`;
     return `
-      <rect x="${x}" y="${y}" width="${BAR_W}" height="${barH}" rx="7" fill="url(#${isToday ? 'barGT' : 'barGO'})"/>
-      ${d.revenue > 0 ? `<text x="${cx}" y="${y - 7}" text-anchor="middle" font-size="9" fill="${isToday ? '#6366f1' : clrLbl}" font-weight="700">${label}</text>` : ''}
+      ${prevH > 0 ? `<rect x="${x}" y="${prevY}" width="${BAR_W}" height="${prevH}" rx="7" fill="${ghostA}"/>` : ''}
+      <rect class="animated-bar" style="animation-delay:${delay}" x="${x}" y="${y}" width="${BAR_W}" height="${barH}" rx="7" fill="url(#${isToday ? 'barGT' : 'barGO'})"/>
+      ${d.revenue > 0 ? `<text style="animation:fadeSlideUp .4s ease both;animation-delay:${delay}" x="${cx}" y="${y - 7}" text-anchor="middle" font-size="9" fill="${isToday ? '#6366f1' : clrLbl}" font-weight="700">${label}</text>` : ''}
       <text x="${cx}" y="${PAD_TOP + H + 16}" text-anchor="middle" font-size="10" fill="${isToday ? '#4f46e5' : clrLbl}" font-weight="${isToday ? '700' : '500'}">${dn}</text>
       <text x="${cx}" y="${PAD_TOP + H + 27}" text-anchor="middle" font-size="9" fill="${isToday ? '#a5b4fc' : clrDt}">${dateNum}</text>
     `;
@@ -1187,21 +1368,35 @@ function renderBillStatus(saved, cancelled) {
 function renderExpiryCalendar(calData, expiringMeds) {
   const el = document.getElementById('expiryCalendar');
   const now = new Date();
-  const thirtyDaysStr = new Date(now.getTime() + 30 * 864e5).toISOString().slice(0, 10);
-  const urgent = (expiringMeds || []).filter(m => m.expiryDate && m.expiryDate <= thirtyDaysStr);
-  if (!urgent.length) {
+  const meds = (expiringMeds || []).map(m => {
+    const daysLeft = Math.ceil((new Date(m.expiryDate) - now) / 864e5);
+    return { ...m, daysLeft };
+  }).filter(m => m.daysLeft >= 0);
+
+  if (!meds.length) {
     el.innerHTML = '<div class="chart-empty" style="color:var(--success)"><span class="chart-empty-icon" style="font-size:1.6rem">🌿</span>No medicines expiring in the next 30 days</div>';
     return;
   }
-  el.innerHTML = urgent.map(m => {
-    const daysLeft = Math.ceil((new Date(m.expiryDate) - now) / 864e5);
-    const color = daysLeft <= 7 ? 'var(--danger)' : daysLeft <= 14 ? '#dc6803' : '#a16207';
-    const bg = daysLeft <= 7 ? 'var(--danger-light)' : daysLeft <= 14 ? 'var(--warning-light)' : 'var(--surface-2)';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;margin-bottom:5px;border-radius:8px;background:${bg}">
-      <div><div style="font-weight:600;font-size:.82rem;color:var(--gray-800)">${h(m.name)}</div><div style="font-size:.71rem;color:var(--gray-500)">Stock: ${h(String(m.stock))}</div></div>
-      <div style="text-align:right;flex-shrink:0;margin-left:8px"><div style="font-size:.77rem;color:${color};font-weight:700">${h(m.expiryDate)}</div><div style="font-size:.67rem;color:${color};font-weight:600">${daysLeft}d left</div></div>
+
+  const critical = meds.filter(m => m.daysLeft <= 7);
+  const urgent   = meds.filter(m => m.daysLeft > 7  && m.daysLeft <= 14);
+  const watch    = meds.filter(m => m.daysLeft > 14 && m.daysLeft <= 30);
+
+  function bandRow(m) {
+    const color = m.daysLeft <= 7 ? 'var(--danger)' : m.daysLeft <= 14 ? '#dc6803' : '#a16207';
+    const bg    = m.daysLeft <= 7 ? 'var(--danger-light)' : m.daysLeft <= 14 ? 'var(--warning-light)' : 'var(--surface-2)';
+    return `<div class="expiry-row" style="background:${bg}">
+      <div><div style="font-weight:600;font-size:.8rem;color:var(--gray-800)">${h(m.name)}</div><div style="font-size:.7rem;color:var(--gray-500)">Stock: ${h(String(m.stock))}</div></div>
+      <div style="text-align:right;flex-shrink:0;margin-left:8px"><div style="font-size:.76rem;color:${color};font-weight:700">${h(m.expiryDate)}</div><div style="font-size:.66rem;color:${color};font-weight:600">${m.daysLeft}d left</div></div>
     </div>`;
-  }).join('');
+  }
+
+  let html = '';
+  if (critical.length) html += `<div class="expiry-band-hdr" style="color:var(--danger)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Critical — &lt;7 days (${critical.length})</div>` + critical.map(bandRow).join('');
+  if (urgent.length)   html += `<div class="expiry-band-hdr" style="color:#d97706;margin-top:${critical.length?8:0}px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Urgent — 7–14 days (${urgent.length})</div>` + urgent.map(bandRow).join('');
+  if (watch.length)    html += `<div class="expiry-band-hdr" style="color:#a16207;margin-top:${(critical.length||urgent.length)?8:0}px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Watch — 15–30 days (${watch.length})</div>` + watch.map(bandRow).join('');
+
+  el.innerHTML = html;
 }
 
 // ── POS ───────────────────────────────────────────
@@ -1247,12 +1442,13 @@ function renderPosMeds(list) {
   }
   const now = new Date();
   const thirtyDays = new Date(now.getTime() + 30 * 864e5);
-  grid.innerHTML = list.map(m => {
+  grid.innerHTML = list.map((m, idx) => {
     const expiring = m.expiryDate && new Date(m.expiryDate) <= thirtyDays && new Date(m.expiryDate) >= now;
     const stockColor = m.stock < 10 ? 'var(--danger)' : m.stock < 30 ? '#d97706' : 'var(--gray-600)';
     const stockBold = m.stock < 30;
+    const delay = `${Math.min(idx * 28, 350)}ms`;
     return `
-    <div class="med-card${m.stock <= 0 ? ' out-of-stock' : ''}" data-code="${h(m.code)}" title="${h(m.name)}">
+    <div class="med-card${m.stock <= 0 ? ' out-of-stock' : ''}" style="animation:popIn .3s cubic-bezier(.34,1.26,.64,1) both;animation-delay:${delay}" data-code="${h(m.code)}" title="${h(m.name)}">
       ${expiring ? `<div style="background:#fef9c3;color:#854d0e;font-size:.65rem;font-weight:700;padding:2px 6px;border-radius:4px;margin-bottom:4px;text-align:center">⚠ Expires ${h(m.expiryDate)}</div>` : ''}
       <div class="mcat">${h(m.category)}</div>
       <div class="mname">${h(m.name)}</div>
@@ -1381,22 +1577,25 @@ document.getElementById('clearCartBtn').addEventListener('click', () => {
   clearCart();
 });
 
-document.getElementById('printCartBtn').addEventListener('click', () => {
+document.getElementById('printCartBtn').addEventListener('click', async () => {
   if (!cart.length) { showToast('Cart is empty', true); return; }
-  const discount = parseFloat(document.getElementById('posDiscount').value) || 0;
-  const sub = cart.reduce((s, i) => s + i.amount, 0);
+  const patientName = document.getElementById('patientName').value.trim() || 'Walk-in Patient';
+  const patientCode = document.getElementById('patientCode').value.trim() || 'WALK-IN';
+  const discount    = parseFloat(document.getElementById('posDiscount').value) || 0;
+  const sub         = cart.reduce((s, i) => s + i.amount, 0);
+  if (discount < 0)   { showToast('Discount cannot be negative', true); return; }
+  if (discount > sub) { showToast('Discount cannot exceed subtotal', true); return; }
+  // Print immediately while still in the click gesture (same pattern as Bills Print)
   printReceipt({
-    id: 'DRAFT',
-    patientName: document.getElementById('patientName').value.trim() || 'Walk-in Patient',
-    patientCode: document.getElementById('patientCode').value.trim() || 'WALK-IN',
-    date: new Date().toISOString().slice(0, 10),
-    items: cart.map(i => ({ medicineName: i.name, qty: i.qty, rate: i.rate, amount: i.amount })),
-    discount,
-    totalAmount: Math.max(0, sub - discount)
+    id: '---', date: new Date().toLocaleDateString('en-PK'),
+    patientName, patientCode, discount,
+    totalAmount: sub - discount,
+    items: cart.map(i => ({ medicineName: i.name, qty: i.qty, rate: i.rate, amount: i.amount }))
   });
+  // Save after printing
+  await saveBill(false);
 });
-
-document.getElementById('saveBillBtn').addEventListener('click', saveBill);
+document.getElementById('saveBillBtn').addEventListener('click', () => saveBill(false));
 
 function clearCart() {
   cart = [];
@@ -1407,7 +1606,7 @@ function clearCart() {
 }
 
 let _isSaving = false;
-async function saveBill() {
+async function saveBill(printAfter = false) {
   if (_isSaving) return;
   if (!cart.length) { showToast('Cart is empty', true); return; }
   const patientName = document.getElementById('patientName').value.trim() || 'Walk-in Patient';
@@ -1425,14 +1624,19 @@ async function saveBill() {
     items: cart.map(i => ({ medicineCode: i.code, medicineName: i.name, unit: i.unit, qty: i.qty, rate: i.rate, amount: i.amount }))
   };
 
-  const btn = document.getElementById('saveBillBtn');
+  const saveBtn  = document.getElementById('saveBillBtn');
+  const printBtn = document.getElementById('printCartBtn');
   _isSaving = true;
-  btn.disabled = true; btn.textContent = 'Saving…';
+  saveBtn.disabled = true;  saveBtn.textContent  = 'Saving…';
+  printBtn.disabled = true; printBtn.textContent = printAfter ? 'Saving…' : 'Save & Print';
   try {
     const res = await apiFetch('/Bills', { method: 'POST', body: JSON.stringify(bill) });
     const data = await res.json();
     if (res.ok) {
-      showToast(`✅ ${data.id} saved!`, false, true);
+      if (printAfter) {
+        try { printReceipt(data); } catch (pe) { showToast('Saved — could not open print dialog', true); }
+      }
+      showToast(`${data.id} saved!`, false, true);
       allMedicines = [];
       clearCart();
       loadPosMedicines();
@@ -1441,7 +1645,6 @@ async function saveBill() {
     }
   } catch (e) {
     if (e.message === 'Session expired. Please login again.') return;
-    // Queue the bill locally and sync when server is available
     const localId = 'LOCAL-' + crypto.randomUUID();
     await idbPut('pendingBills', { ...bill, localId, queuedAt: new Date().toISOString() })
       .then(() => {
@@ -1452,7 +1655,9 @@ async function saveBill() {
       .catch(() => showToast('Network error — check server', true));
   } finally {
     _isSaving = false;
-    btn.disabled = false; btn.textContent = 'Save Bill';
+    saveBtn.disabled = false;  saveBtn.textContent  = 'Save Bill';
+    printBtn.disabled = false;
+    printBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print';
   }
 }
 
@@ -1823,11 +2028,9 @@ document.getElementById('printBillBtn').addEventListener('click', () => {
 
 function printReceipt(b) {
   const sub = b.items.reduce((s, i) => s + i.amount, 0);
-  const w = window.open('', '_blank', 'width=350,height=650');
-  if (!w) { showToast('Allow popups to print', true); return; }
   const e = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  w.document.write(`<!DOCTYPE html><html><head><title>Receipt ${e(b.id)}</title><style>
-    body{font-family:monospace;font-size:11px;padding:10px;max-width:280px}
+  const html = `<!DOCTYPE html><html><head><title>Receipt ${e(b.id)}</title><style>
+    body{font-family:monospace;font-size:11px;padding:10px;max-width:280px;margin:0}
     h2,h3{text-align:center;margin:4px 0}
     hr{border:none;border-top:1px dashed #000;margin:6px 0}
     .row{display:flex;justify-content:space-between}
@@ -1859,11 +2062,18 @@ function printReceipt(b) {
     <div class="row total"><span>TOTAL:</span><span>PKR ${Number(b.totalAmount).toFixed(2)}</span></div>
     <hr/>
     <p style="text-align:center;font-size:9px">Thank you for your purchase<br/>Nexiffy Pharmacy POS</p>
-  </body></html>`);
-  w.document.close();
-  w.focus();
-  w.print();
-  w.close();
+  </body></html>`;
+  let frame = document.getElementById('print-frame');
+  if (!frame) {
+    frame = document.createElement('iframe');
+    frame.id = 'print-frame';
+    frame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none';
+    document.body.appendChild(frame);
+  }
+  const doc = frame.contentDocument || frame.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  frame.contentWindow.focus();
+  frame.contentWindow.print();
 }
 
 // ── Category Management ────────────────────────────
@@ -2002,6 +2212,18 @@ function fmtStat(n) {
   return Number(n).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
+function animateCounter(el, target, formatter, duration = 750) {
+  const start = performance.now();
+  const tick = now => {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.textContent = formatter(target * ease);
+    if (p < 1) requestAnimationFrame(tick);
+    else el.textContent = formatter(target);
+  };
+  requestAnimationFrame(tick);
+}
+
 function showToast(msg, isErr = false, isOk = false) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -2108,6 +2330,7 @@ const _escMap = {
   medModal: 'closeMedModalBtn', billModal: 'closeBillModalBtn',
   catMgmtModal: 'closeCatMgmtBtn', passModal: 'closePassModalBtn',
   restockModal: 'closeRestockBtn', cancelBillModal: 'closeCancelModalBtn',
+  eodModal: 'closeEodBtn',
 };
 document.addEventListener('keydown', e => {
   const tag = document.activeElement.tagName;
@@ -2129,6 +2352,116 @@ document.getElementById('ds-low-stock-card').addEventListener('keydown', e => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('medicines'); }
 });
 
+// +Stock button in low stock table
+document.getElementById('lowStockTable').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-restock]');
+  if (!btn) return;
+  const code    = btn.dataset.restock;
+  const name    = btn.dataset.name;
+  const current = Number(btn.dataset.stock);
+  const raw = prompt(`Add stock for: ${name}\nCurrent stock: ${current} units\n\nEnter quantity to add:`, '');
+  if (raw === null) return;
+  const qty = parseInt(raw.trim(), 10);
+  if (isNaN(qty) || qty <= 0) { showToast('Enter a valid positive number', true); return; }
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const res = await apiFetch(`/Medicines/${encodeURIComponent(code)}/stock`, {
+      method: 'PUT', body: JSON.stringify({ adjustment: qty })
+    });
+    if (res.ok) {
+      showToast(`+${qty} added to ${name}`, false, true);
+      loadDashboard();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.message || 'Failed to update stock', true);
+      btn.disabled = false; btn.textContent = '+Stock';
+    }
+  } catch { showToast('Network error', true); btn.disabled = false; btn.textContent = '+Stock'; }
+});
+
+// End-of-day modal
+document.getElementById('endOfDayBtn').addEventListener('click', () => {
+  const d = _lastDashData;
+  const todayStr = new Date().toLocaleDateString('en-PK', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const avgBill = d && d.periodBillCount > 0 ? (d.periodSales / d.periodBillCount) : 0;
+  const topMeds = d?.topMedicines?.slice(0, 5) || [];
+  const target = Number(localStorage.getItem('nexiffy_daily_target') || 0);
+  const pct = target > 0 ? Math.min(Math.round((d?.periodSales || 0) / target * 100), 100) : 0;
+
+  document.getElementById('eodBody').innerHTML = `
+    <div style="font-size:.78rem;color:var(--gray-400);margin-bottom:16px">${h(todayStr)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:var(--primary-subtle);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:1.2rem;font-weight:800;color:var(--primary)">PKR ${Math.round(d?.periodSales || 0).toLocaleString()}</div>
+        <div style="font-size:.68rem;color:var(--tx-3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Today's Revenue</div>
+      </div>
+      <div style="background:var(--success-light);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:1.2rem;font-weight:800;color:var(--success)">${d?.periodBillCount || 0}</div>
+        <div style="font-size:.68rem;color:var(--tx-3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Bills Today</div>
+      </div>
+      <div style="background:#ede9fe;border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:1.2rem;font-weight:800;color:#7c3aed">PKR ${Math.round(avgBill).toLocaleString()}</div>
+        <div style="font-size:.68rem;color:var(--tx-3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Avg Bill</div>
+      </div>
+    </div>
+    ${target > 0 ? `<div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--gray-500);margin-bottom:5px"><span>Daily Target Progress</span><span style="font-weight:700;color:var(--primary)">${pct}%</span></div><div style="background:var(--bg);border-radius:20px;height:8px;overflow:hidden"><div style="height:100%;border-radius:20px;background:linear-gradient(90deg,var(--primary),var(--success));width:${pct}%"></div></div></div>` : ''}
+    ${topMeds.length ? `<div style="font-size:.72rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Top Medicines Today</div>
+    <table style="width:100%;font-size:.82rem"><thead><tr><th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Medicine</th><th style="padding:6px 8px;text-align:right">Qty</th></tr></thead>
+    <tbody>${topMeds.map((m, i) => `<tr><td style="padding:5px 8px;color:var(--gray-400)">${i+1}</td><td style="padding:5px 8px">${h(m.medicineName)}</td><td style="padding:5px 8px;text-align:right;font-weight:700">${h(String(m.totalQty))}</td></tr>`).join('')}</tbody></table>` : ''}
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <div style="flex:1;background:var(--success-light);border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:var(--success)">${d?.savedCount || 0}</div><div style="font-size:.68rem;color:var(--success);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Saved</div></div>
+      <div style="flex:1;background:var(--danger-light);border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:var(--danger)">${d?.cancelledCount || 0}</div><div style="font-size:.68rem;color:var(--danger);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Cancelled</div></div>
+    </div>`;
+
+  document.getElementById('eodModal').classList.add('open');
+});
+
+document.getElementById('closeEodBtn').addEventListener('click', () => {
+  document.getElementById('eodModal').classList.remove('open');
+});
+
+document.getElementById('eodPrintBtn').addEventListener('click', () => {
+  const d = _lastDashData;
+  const todayStr = new Date().toLocaleDateString('en-PK', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const avgBill = d && d.periodBillCount > 0 ? (d.periodSales / d.periodBillCount) : 0;
+  const topMeds = d?.topMedicines?.slice(0, 5) || [];
+  const e = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const html = `<!DOCTYPE html><html><head><title>Day Summary</title><style>
+    body{font-family:monospace;font-size:11px;padding:12px;max-width:280px;margin:0}
+    h2,h3{text-align:center;margin:4px 0}
+    hr{border:none;border-top:1px dashed #000;margin:6px 0}
+    .row{display:flex;justify-content:space-between;margin:3px 0}
+    table{width:100%;border-collapse:collapse}td,th{padding:2px 4px;font-size:10px}
+    th{border-bottom:1px solid #000}.bold{font-weight:bold}
+  </style></head><body>
+    <h2>NEXFFY PHARMACY</h2>
+    <h3>Daily Summary</h3>
+    <hr/>
+    <div class="row"><span>Date:</span><span>${e(todayStr)}</span></div>
+    <hr/>
+    <div class="row bold"><span>Today's Revenue:</span><span>PKR ${Math.round(d?.periodSales || 0).toLocaleString()}</span></div>
+    <div class="row"><span>Bills Saved:</span><span>${d?.savedCount || 0}</span></div>
+    <div class="row"><span>Bills Cancelled:</span><span>${d?.cancelledCount || 0}</span></div>
+    <div class="row"><span>Avg Bill Value:</span><span>PKR ${Math.round(avgBill).toLocaleString()}</span></div>
+    ${topMeds.length ? `<hr/><div class="bold" style="margin:4px 0">Top Medicines</div>
+    <table><thead><tr><th>#</th><th style="text-align:left">Medicine</th><th>Qty</th></tr></thead>
+    <tbody>${topMeds.map((m, i) => `<tr><td>${i+1}</td><td>${e(m.medicineName)}</td><td style="text-align:right">${e(String(m.totalQty))}</td></tr>`).join('')}</tbody></table>` : ''}
+    <hr/>
+    <p style="text-align:center;font-size:9px">Nexiffy Pharmacy POS</p>
+  </body></html>`;
+  let frame = document.getElementById('print-frame');
+  if (!frame) {
+    frame = document.createElement('iframe');
+    frame.id = 'print-frame';
+    frame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none';
+    document.body.appendChild(frame);
+  }
+  const doc = frame.contentDocument || frame.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  frame.contentWindow.focus();
+  frame.contentWindow.print();
+});
+
 // ── POS keyboard: Enter → save bill ──────────────
 document.getElementById('patientName').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('patientCode').focus();
@@ -2139,6 +2472,19 @@ document.getElementById('patientCode').addEventListener('keydown', e => {
 document.getElementById('posDiscount').addEventListener('keydown', e => {
   if (e.key === 'Enter') saveBill();
 });
+
+// ── Ripple effect on all .btn clicks ─────────────
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn');
+  if (!btn) return;
+  const r = document.createElement('span');
+  r.className = 'ripple';
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size / 2}px;top:${e.clientY - rect.top - size / 2}px`;
+  btn.appendChild(r);
+  setTimeout(() => r.remove(), 520);
+}, { passive: true });
 
 // ── Boot ──────────────────────────────────────────
 document.getElementById('loginPass').addEventListener('keydown', e => {
