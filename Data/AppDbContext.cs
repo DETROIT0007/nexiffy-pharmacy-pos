@@ -32,6 +32,9 @@ namespace Nexiffy.Data
             modelBuilder.Entity<BillItem>()
                 .HasIndex(i => i.MedicineCode)
                 .HasDatabaseName("IX_BillItems_MedicineCode");
+            modelBuilder.Entity<Medicine>()
+                .HasIndex(m => m.Barcode)
+                .HasDatabaseName("IX_Medicines_Barcode");
             modelBuilder.Entity<RevokedToken>()
                 .HasIndex(t => t.ExpiresAt)
                 .HasDatabaseName("IX_RevokedTokens_ExpiresAt");

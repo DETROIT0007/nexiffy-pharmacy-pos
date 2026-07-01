@@ -46,6 +46,9 @@ namespace Nexiffy.Models
         [MaxLength(200)]
         public string Manufacturer { get; set; } = string.Empty;
 
+        [MaxLength(50)]
+        public string? Barcode { get; set; }
+
         public DateTime? LastUpdated { get; set; }
 
         public bool IsDeleted { get; set; } = false;

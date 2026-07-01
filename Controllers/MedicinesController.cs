@@ -59,6 +59,13 @@ namespace Nexiffy.Controllers
             return med == null ? NotFound() : Ok(med);
         }
 
+        [HttpGet("barcode/{barcode}")]
+        public async Task<ActionResult<Medicine>> GetByBarcode(string barcode)
+        {
+            var med = await _context.Medicines.FirstOrDefaultAsync(m => m.Barcode == barcode);
+            return med == null ? NotFound() : Ok(med);
+        }
+
         [HttpPost]
         public async Task<ActionResult<Medicine>> Create(Medicine medicine)
         {
@@ -99,6 +106,7 @@ namespace Nexiffy.Controllers
             existing.Stock        = medicine.Stock;
             existing.ExpiryDate   = medicine.ExpiryDate;
             existing.Manufacturer = medicine.Manufacturer;
+            existing.Barcode      = medicine.Barcode;
             existing.LastUpdated  = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return Ok(existing);

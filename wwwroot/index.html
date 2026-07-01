@@ -696,6 +696,7 @@
           <div class="form-row">
             <input class="input-lg" type="text" id="posSearch" placeholder="🔍 Search medicine / scan barcode…" autocomplete="off"/>
             <select id="posCatFilter"><option value="">All Categories</option></select>
+            <button class="btn btn-ghost" id="posScanBtn" title="Scan barcode with camera" aria-label="Scan barcode with camera"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg> Scan</button>
           </div>
           <div class="med-grid" id="posMedGrid">
             <div style="color:var(--gray-400);grid-column:1/-1;text-align:center;padding:30px">Loading medicines…</div>
@@ -730,6 +731,7 @@
       <div class="form-row">
         <input class="input-lg" type="text" id="medSearch" placeholder="Search name, generic, or code…"/>
         <select id="medCatFilter"><option value="">All Categories</option></select>
+        <button class="btn btn-ghost" id="medScanBtn" title="Scan barcode to find or add a medicine" aria-label="Scan barcode to find or add a medicine"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg> Scan</button>
         <button class="btn btn-ghost" id="manageCatBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Categories</button>
         <button class="btn btn-primary" id="addMedBtn">+ Add Medicine</button>
       </div>
@@ -761,6 +763,21 @@
 </div>
 
 <!-- Medicine Modal -->
+<!-- Barcode/QR Scanner Modal -->
+<div class="modal-overlay" id="scanModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="scanModalTitle" style="max-width:420px;padding:0;overflow:hidden">
+    <h3 id="scanModalTitle" style="padding:16px 20px 12px">Scan Barcode</h3>
+    <div id="scanVideoWrap" style="position:relative;background:#000;aspect-ratio:4/3;overflow:hidden">
+      <video id="scanVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+      <div style="position:absolute;inset:15% 12%;border:2px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,.35);pointer-events:none"></div>
+    </div>
+    <div id="scanStatus" style="padding:12px 20px;font-size:.82rem;color:var(--tx-3);text-align:center">Point the camera at a barcode…</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="closeScanModalBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="medModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="medModalTitle">
     <h3 id="medModalTitle">Add New Medicine</h3>
@@ -775,7 +792,14 @@
       <div class="form-col"><label>Price (PKR) *</label><input id="mPrice" type="number" min="0.01" step="0.01" placeholder="0.00"/></div>
       <div class="form-col"><label>Stock</label><input id="mStock" type="number" min="0" placeholder="0"/></div>
       <div class="form-col"><label>Expiry Date</label><input id="mExpiry" type="date"/></div>
-      <div class="form-col" style="grid-column:1/-1"><label>Manufacturer</label><input id="mManufacturer" placeholder="GSK" maxlength="200"/></div>
+      <div class="form-col"><label>Manufacturer</label><input id="mManufacturer" placeholder="GSK" maxlength="200"/></div>
+      <div class="form-col" style="grid-column:1/-1">
+        <label>Barcode</label>
+        <div style="display:flex;gap:6px">
+          <input id="mBarcode" placeholder="Scan or type manufacturer barcode" maxlength="50" style="flex:1"/>
+          <button type="button" class="btn btn-ghost" id="mBarcodeScanBtn" title="Scan barcode with camera" aria-label="Scan barcode with camera"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg></button>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="closeMedModalBtn">Cancel</button>
@@ -1434,6 +1458,108 @@ async function loadPosMedicines() {
   renderPosMeds(allMedicines);
 }
 
+// ── Barcode/QR Scanner (camera) ─────────────────────
+// Uses the native BarcodeDetector API — zero external dependencies, works
+// offline, fits the app's PWA architecture. Not supported in Firefox/Safari;
+// those users fall back to a hardware keyboard-wedge scanner or manual entry.
+let _scanStream = null;
+let _scanRAF = null;
+
+function scannerSupported() {
+  return 'BarcodeDetector' in window;
+}
+
+async function startScanner(onResult) {
+  if (!scannerSupported()) {
+    showToast('Camera scanning isn\'t supported in this browser. Use a USB/Bluetooth barcode scanner or type the code instead.', true);
+    return;
+  }
+
+  const modal = document.getElementById('scanModal');
+  const video = document.getElementById('scanVideo');
+  const status = document.getElementById('scanStatus');
+  status.textContent = 'Point the camera at a barcode…';
+  modal.classList.add('open');
+
+  try {
+    _scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch {
+    status.textContent = 'Camera access denied or unavailable.';
+    showToast('Could not access the camera — check permissions.', true);
+    return;
+  }
+  video.srcObject = _scanStream;
+
+  const detector = new BarcodeDetector({
+    formats: ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'codabar', 'itf']
+  });
+
+  const tick = async () => {
+    if (!_scanStream) return;
+    try {
+      const codes = await detector.detect(video);
+      if (codes.length) {
+        const value = codes[0].rawValue;
+        stopScanner();
+        onResult(value);
+        return;
+      }
+    } catch { /* transient decode errors are normal between frames */ }
+    _scanRAF = requestAnimationFrame(tick);
+  };
+  _scanRAF = requestAnimationFrame(tick);
+}
+
+function stopScanner() {
+  if (_scanRAF) cancelAnimationFrame(_scanRAF);
+  _scanRAF = null;
+  if (_scanStream) {
+    _scanStream.getTracks().forEach(t => t.stop());
+    _scanStream = null;
+  }
+  document.getElementById('scanVideo').srcObject = null;
+  document.getElementById('scanModal').classList.remove('open');
+}
+
+document.getElementById('closeScanModalBtn').addEventListener('click', stopScanner);
+
+document.getElementById('posScanBtn').addEventListener('click', () => {
+  startScanner(code => {
+    const exact = allMedicines.find(m => m.barcode === code || m.code.toLowerCase() === code.toLowerCase());
+    if (exact && exact.stock > 0) {
+      addToCart(exact.code);
+      showToast(`Added: ${exact.name}`, false, true);
+    } else if (exact) {
+      showToast(`${exact.name} is out of stock`, true);
+    } else {
+      showToast('No medicine found for that barcode', true);
+    }
+  });
+});
+
+document.getElementById('mBarcodeScanBtn').addEventListener('click', () => {
+  startScanner(code => {
+    document.getElementById('mBarcode').value = code;
+  });
+});
+
+document.getElementById('medScanBtn').addEventListener('click', () => {
+  startScanner(async code => {
+    try {
+      const res = await apiFetch(`/Medicines/barcode/${encodeURIComponent(code)}`);
+      if (res.ok) {
+        const med = await res.json();
+        openEditMedicine(med.code);
+        showToast(`Found: ${med.name}`, false, true);
+      } else {
+        openAddMedicine();
+        document.getElementById('mBarcode').value = code;
+        showToast('No medicine found for that barcode — add it below', true);
+      }
+    } catch { showToast('Network error looking up barcode', true); }
+  });
+});
+
 function filterPosMeds() {
   const q = document.getElementById('posSearch').value.toLowerCase();
   const cat = document.getElementById('posCatFilter').value;
@@ -1481,15 +1607,18 @@ function focusPosSearch() {
   setTimeout(() => document.getElementById('posSearch').focus(), 100);
 }
 
-// Enter key on barcode scanner auto-searches
+// Enter key on hardware (USB/Bluetooth keyboard-wedge) barcode scanner auto-adds to cart
 document.getElementById('posSearch').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     const q = e.target.value.trim();
-    const exact = allMedicines.find(m => m.code.toLowerCase() === q.toLowerCase());
+    const exact = allMedicines.find(m =>
+      m.barcode === q || m.code.toLowerCase() === q.toLowerCase());
     if (exact && exact.stock > 0) {
       addToCart(exact.code);
       e.target.value = '';
       filterPosMeds();
+    } else if (exact) {
+      showToast(`${exact.name} is out of stock`, true);
     }
   }
 });
@@ -1816,7 +1945,7 @@ function openAddMedicine() {
   editingMedCode = null;
   document.getElementById('medModalTitle').textContent = 'Add New Medicine';
   document.getElementById('medSaveBtn').textContent = 'Save Medicine';
-  ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer'].forEach(id => document.getElementById(id).value = '');
+  ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer','mBarcode'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('mUnit').value = 'Strip';
   document.getElementById('mCode').disabled = false;
   document.getElementById('medModal').classList.add('open');
@@ -1839,6 +1968,7 @@ async function openEditMedicine(code) {
     document.getElementById('mStock').value = m.stock;
     document.getElementById('mExpiry').value = m.expiryDate || '';
     document.getElementById('mManufacturer').value = m.manufacturer;
+    document.getElementById('mBarcode').value = m.barcode || '';
     document.getElementById('medModal').classList.add('open');
   } catch { showToast('Could not load medicine', true); }
 }
@@ -1847,7 +1977,7 @@ document.getElementById('addMedBtn').addEventListener('click', openAddMedicine);
 document.getElementById('closeMedModalBtn').addEventListener('click', () => {
   document.getElementById('medModal').classList.remove('open');
   editingMedCode = null;
-  ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer']
+  ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer','mBarcode']
     .forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('mUnit').value = 'Strip';
 });
@@ -1862,6 +1992,7 @@ document.getElementById('medSaveBtn').addEventListener('click', async () => {
     price: parseFloat(document.getElementById('mPrice').value) || 0,
     stock: parseInt(document.getElementById('mStock').value) || 0,
     expiryDate: document.getElementById('mExpiry').value || null,
+    barcode: document.getElementById('mBarcode').value.trim() || null,
     manufacturer: document.getElementById('mManufacturer').value.trim()
   };
   if (!med.code || !med.name || !med.price) { showToast('Code, Name and Price are required', true); return; }
