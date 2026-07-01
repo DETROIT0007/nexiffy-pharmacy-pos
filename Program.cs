@@ -9,12 +9,30 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
 
-// ── JWT Secret — stored in OS data directory, never in source ───────
-// On first run a cryptographically random key is generated and written to
-// %PROGRAMDATA%\Nexiffy\jwt.key so it persists across restarts without
-// ever appearing in appsettings.json or source control.
-static string GetOrCreateJwtSecret()
+// ── JWT Secret ────────────────────────────────────────────────────
+// Cloud hosts (Azure App Service, Render, Railway, containers, ...) have
+// ephemeral/non-Windows disks and often run multiple instances, so a
+// secret written to a local file is unreliable: it can vanish on restart
+// or differ between instances, silently invalidating every issued token.
+// Preferred source is configuration (appsettings "Auth:JwtSecret", or the
+// AUTH__JWTSECRET / Auth__JwtSecret env var most hosts map it to). Only
+// when that's absent do we fall back to a local file, which is fine for
+// single-instance local development but logs a warning everywhere else.
+static string GetOrCreateJwtSecret(IConfiguration config, IHostEnvironment env)
 {
+    var configured = config["Auth:JwtSecret"];
+    if (!string.IsNullOrWhiteSpace(configured) && configured.Length >= 32)
+    {
+        return configured;
+    }
+
+    if (!env.IsDevelopment())
+    {
+        Console.WriteLine("[Nexiffy] WARNING: Auth:JwtSecret is not configured. Falling back to a " +
+            "locally generated key that may not persist across restarts or be shared between instances. " +
+            "Set the Auth:JwtSecret configuration value (e.g. Auth__JwtSecret env var) in production.");
+    }
+
     var keyPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
         "Nexiffy", "jwt.key");
@@ -48,9 +66,9 @@ static string GetOrCreateJwtSecret()
     return secret;
 }
 
-var jwtSecret = GetOrCreateJwtSecret();
-
 var builder = WebApplication.CreateBuilder(args);
+
+var jwtSecret = GetOrCreateJwtSecret(builder.Configuration, builder.Environment);
 
 // ── Services ─────────────────────────────────────────
 builder.Services.AddControllers();
@@ -126,7 +144,7 @@ builder.Services.AddRateLimiter(opts =>
 
 // ── Database ──────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
@@ -174,18 +192,6 @@ using (var scope = app.Services.CreateScope())
         }
         context.Database.EnsureCreated();
 
-        // Create RevokedTokens table if the DB was created before this table was added
-        await context.Database.ExecuteSqlRawAsync(@"
-            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'RevokedTokens')
-            BEGIN
-                CREATE TABLE [RevokedTokens] (
-                    [Jti] NVARCHAR(200) NOT NULL,
-                    [ExpiresAt] DATETIME2 NOT NULL,
-                    CONSTRAINT [PK_RevokedTokens] PRIMARY KEY ([Jti])
-                );
-                CREATE INDEX [IX_RevokedTokens_ExpiresAt] ON [RevokedTokens] ([ExpiresAt]);
-            END");
-
         // Seed 10 sample medicines if no active (non-deleted) medicines exist
         if (!context.Medicines.IgnoreQueryFilters().Any(m => !m.IsDeleted))
         {
@@ -231,5 +237,7 @@ if (string.IsNullOrWhiteSpace(app.Configuration["Auth:PasswordHash"]) &&
     Console.WriteLine($"   Set Auth:PasswordHash = \"{hash}\" in appsettings.json and remove Auth:Password.");
 }
 
-var port = builder.Configuration["Server:Port"] ?? "5200";
+// Render/Railway/Heroku-style hosts inject the listen port via the PORT
+// env var; fall back to configured/default port for local development.
+var port = Environment.GetEnvironmentVariable("PORT") ?? builder.Configuration["Server:Port"] ?? "5200";
 app.Run($"http://0.0.0.0:{port}");

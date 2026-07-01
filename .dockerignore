@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+.git/
+*.user
+server.log
+server.err
+server_err.log
+run_output.log
+appsettings.Development.json
