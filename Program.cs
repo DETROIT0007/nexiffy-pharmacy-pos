@@ -196,7 +196,7 @@ using (var scope = app.Services.CreateScope())
         // Seed 10 sample medicines if no active (non-deleted) medicines exist
         if (!context.Medicines.IgnoreQueryFilters().Any(m => !m.IsDeleted))
         {
-            var today = DateTime.Now;
+            var today = DateTime.UtcNow;
             context.Medicines.AddRange(new[]
             {
                 new Nexiffy.Models.Medicine { Code="MED-001", Name="Panadol 500mg",       GenericName="Paracetamol",       Category="Painkiller",   Unit="Strip",  Price=35m,   Stock=120, ExpiryDate=today.AddMonths(18).ToString("yyyy-MM-dd"), Manufacturer="GSK",          LastUpdated=today },

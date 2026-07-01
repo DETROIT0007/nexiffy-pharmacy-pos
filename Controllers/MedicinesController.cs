@@ -68,7 +68,7 @@ namespace Nexiffy.Controllers
             if (await _context.Medicines.IgnoreQueryFilters().AnyAsync(m => m.Code == medicine.Code))
                 return Conflict(new { message = "Medicine code already exists" });
 
-            medicine.LastUpdated = DateTime.Now;
+            medicine.LastUpdated = DateTime.UtcNow;
             _context.Medicines.Add(medicine);
             await _context.SaveChangesAsync();
 
@@ -99,7 +99,7 @@ namespace Nexiffy.Controllers
             existing.Stock        = medicine.Stock;
             existing.ExpiryDate   = medicine.ExpiryDate;
             existing.Manufacturer = medicine.Manufacturer;
-            existing.LastUpdated  = DateTime.Now;
+            existing.LastUpdated  = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return Ok(existing);
         }
@@ -111,7 +111,7 @@ namespace Nexiffy.Controllers
             if (med == null) return NotFound();
 
             med.IsDeleted    = true;
-            med.LastUpdated  = DateTime.Now;
+            med.LastUpdated  = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Medicine '{Code}' ({Name}) soft-deleted by {User}",
@@ -176,7 +176,7 @@ namespace Nexiffy.Controllers
 
                 var oldStock = med.Stock;
                 med.Stock += req.Adjustment;
-                med.LastUpdated = DateTime.Now;
+                med.LastUpdated = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 

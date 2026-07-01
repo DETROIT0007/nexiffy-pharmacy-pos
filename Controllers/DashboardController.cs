@@ -17,7 +17,7 @@ namespace Nexiffy.Controllers
         [HttpGet]
         public async Task<IActionResult> GetStats([FromQuery] string period = "today")
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var today = now.ToString("yyyy-MM-dd");
             var thirtyDaysStr  = now.AddDays(30).ToString("yyyy-MM-dd");
             var fourteenDaysAgo = now.AddDays(-13).ToString("yyyy-MM-dd");

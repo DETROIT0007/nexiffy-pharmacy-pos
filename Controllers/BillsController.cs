@@ -99,7 +99,7 @@ namespace Nexiffy.Controllers
                 }
 
                 bill.Id = $"BILL-{seq:D8}";
-                bill.Date = DateTime.Now.ToString("yyyy-MM-dd");
+                bill.Date = DateTime.UtcNow.ToString("yyyy-MM-dd");
                 bill.Status = BillStatus.Saved;
                 bill.CreatedBy = User.Identity?.Name;
 
@@ -123,7 +123,7 @@ namespace Nexiffy.Controllers
                         return BadRequest(new { message = $"Insufficient stock for {med.Name}. Available: {med.Stock}" });
 
                     med.Stock -= deduct;
-                    med.LastUpdated = DateTime.Now;
+                    med.LastUpdated = DateTime.UtcNow;
                 }
 
                 // Subtotal computed after server-side rate/amount correction
@@ -164,7 +164,7 @@ namespace Nexiffy.Controllers
                 // Evaluate outside the expression tree — ?. is not allowed inside lambdas
                 var cancelNote = req.Reason;
                 var cancelledBy = User.Identity?.Name;
-                var today = DateTime.Now.ToString("yyyy-MM-dd");
+                var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
 
                 // Atomic status flip — prevents double-cancel under concurrent requests
                 var updated = await _context.Bills
@@ -203,7 +203,7 @@ namespace Nexiffy.Controllers
                     if (cancelMeds.TryGetValue(item.MedicineCode, out var med))
                     {
                         med.Stock += (int)item.Qty;
-                        med.LastUpdated = DateTime.Now;
+                        med.LastUpdated = DateTime.UtcNow;
                     }
                     else
                     {
