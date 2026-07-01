@@ -1460,18 +1460,31 @@ async function loadPosMedicines() {
 
 // ── Barcode/QR Scanner (camera) ─────────────────────
 // Uses the native BarcodeDetector API — zero external dependencies, works
-// offline, fits the app's PWA architecture. Not supported in Firefox/Safari;
-// those users fall back to a hardware keyboard-wedge scanner or manual entry.
+// offline, fits the app's PWA architecture. Not supported in Firefox/Safari.
+//
+// Every browser on iOS (Chrome, Firefox, Edge included) is required by Apple
+// to run on WebKit, so `'BarcodeDetector' in window` alone is not a reliable
+// check there: WebKit's own partial Shape Detection implementation has been
+// broken since iOS 18 (webkit.org bug 281848) — it can be present but never
+// actually detect anything, which just wastes a camera-permission prompt for
+// nothing. Treat all iOS browsers as unsupported outright.
 let _scanStream = null;
 let _scanRAF = null;
 
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function scannerSupported() {
-  return 'BarcodeDetector' in window;
+  return 'BarcodeDetector' in window && !isIOS();
 }
 
 async function startScanner(onResult) {
   if (!scannerSupported()) {
-    showToast('Camera scanning isn\'t supported in this browser. Use a USB/Bluetooth barcode scanner or type the code instead.', true);
+    showToast(isIOS()
+      ? 'Camera scanning isn\'t available on iOS yet (an Apple/WebKit limitation, not a bug here). Use a USB/Bluetooth barcode scanner or type the code instead.'
+      : 'Camera scanning isn\'t supported in this browser. Use a USB/Bluetooth barcode scanner or type the code instead.', true);
     return;
   }
 
