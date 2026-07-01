@@ -543,23 +543,9 @@
       #changePassBtn .btn-label{display:none}
     }
 
-    /* ── Print receipt overlay ───────────────────── */
-    #print-overlay{display:none}
-    @media print{
-      body>*:not(#print-overlay){display:none!important}
-      #print-overlay{display:block!important;font-family:monospace;font-size:11px;padding:10px;max-width:280px}
-      #print-overlay h2,#print-overlay h3{text-align:center;margin:4px 0}
-      #print-overlay hr{border:none;border-top:1px dashed #000;margin:6px 0}
-      #print-overlay .pr{display:flex;justify-content:space-between}
-      #print-overlay table{width:100%;border-collapse:collapse}
-      #print-overlay td,#print-overlay th{padding:2px 4px;font-size:10px}
-      #print-overlay th{border-bottom:1px solid #000}
-      #print-overlay .total{font-weight:bold}
-    }
   </style>
 </head>
 <body>
-<div id="print-overlay"></div>
 
 <!-- ── Install Banner ────────────────────────────── -->
 <div id="installBanner">
@@ -2567,7 +2553,12 @@ function printReceipt(b) {
   const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
 
   const html = `<!DOCTYPE html><html><head><title>Receipt ${e(b.id)}</title><style>
-    body{font-family:monospace;font-size:11px;padding:10px;max-width:280px;margin:0}
+    /* Chrome/Edge only render their auto header (page title) and footer
+       (date/URL) inside the page margin area — zeroing it here is what
+       actually suppresses them, since the page itself can't toggle the
+       browser's "Headers and footers" print option directly. */
+    @page{margin:0}
+    body{font-family:monospace;font-size:11px;padding:14px 10px;max-width:280px;margin:0}
     h2,h3{text-align:center;margin:4px 0}
     hr{border:none;border-top:1px dashed #000;margin:6px 0}
     .row{display:flex;justify-content:space-between}
