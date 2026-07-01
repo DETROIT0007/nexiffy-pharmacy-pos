@@ -130,6 +130,14 @@
       transition:border-color .15s,box-shadow .15s;background:var(--surface-2);color:var(--tx);
     }
     .login-field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.12);background:var(--surface)}
+    .login-field-pass-wrap{position:relative}
+    .login-field-pass-wrap input{padding-right:40px}
+    .pass-toggle-btn{
+      position:absolute;right:4px;top:50%;transform:translateY(-50%);
+      background:none;border:none;padding:7px;cursor:pointer;color:var(--tx-4);
+      display:flex;align-items:center;justify-content:center;border-radius:6px;transition:color .15s,background .15s;
+    }
+    .pass-toggle-btn:hover{color:var(--tx-2);background:var(--surface-3)}
     #loginError{color:var(--danger);font-size:.8rem;text-align:center;min-height:20px;margin-top:6px;font-weight:500}
     .btn-login{
       width:100%;padding:12px;background:var(--primary);color:#fff;
@@ -585,7 +593,12 @@
     </div>
     <div class="login-field">
       <label for="loginPass">Password</label>
-      <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+      <div class="login-field-pass-wrap">
+        <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+        <button type="button" class="pass-toggle-btn" id="loginPassToggle" aria-label="Show password" title="Show password">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
     </div>
     <div id="loginError"></div>
     <button class="btn-login" id="loginBtn" onclick="login()">Login</button>
@@ -1092,6 +1105,18 @@ async function apiFetch(url, opts = {}) {
   return res;
 }
 
+document.getElementById('loginPassToggle').addEventListener('click', () => {
+  const input = document.getElementById('loginPass');
+  const btn = document.getElementById('loginPassToggle');
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  btn.title = showing ? 'Show password' : 'Hide password';
+  btn.innerHTML = showing
+    ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>'
+    : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.3 21.3 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.3 21.3 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+});
+
 async function login() {
   const username = document.getElementById('loginUser').value.trim();
   const password = document.getElementById('loginPass').value;
@@ -1137,6 +1162,9 @@ function showLogin() {
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('appShell').style.display = 'none';
   document.getElementById('loginPass').value = '';
+  document.getElementById('loginPass').type = 'password';
+  document.getElementById('loginPassToggle').innerHTML =
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>';
 }
 
 function hideLogin() {
