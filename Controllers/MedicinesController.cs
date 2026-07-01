@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Nexiffy.Data;
 using Nexiffy.Models;
+using System.Text.Json;
 
 namespace Nexiffy.Controllers
 {
@@ -13,11 +14,13 @@ namespace Nexiffy.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ILogger<MedicinesController> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public MedicinesController(AppDbContext context, ILogger<MedicinesController> logger)
+        public MedicinesController(AppDbContext context, ILogger<MedicinesController> logger, IHttpClientFactory httpClientFactory)
         {
             _context = context;
             _logger = logger;
+            _httpClientFactory = httpClientFactory;
         }
 
         [HttpGet]
@@ -64,6 +67,53 @@ namespace Nexiffy.Controllers
         {
             var med = await _context.Medicines.FirstOrDefaultAsync(m => m.Barcode == barcode);
             return med == null ? NotFound() : Ok(med);
+        }
+
+        // Best-effort product-name lookup against a free, keyless public UPC/EAN
+        // database, for pre-filling the Add Medicine form when scanning a
+        // barcode with no local match yet. This is crowd-sourced consumer
+        // product data, not a pharmaceutical registry — coverage of local/
+        // regional medicine brands will be spotty, and occasional entries are
+        // simply wrong. Only Name/Manufacturer are returned (the only fields
+        // a generic product lookup can plausibly get right); the caller must
+        // still let the user review before saving, never auto-save.
+        [HttpGet("lookup-external/{barcode}")]
+        public async Task<IActionResult> LookupExternal(string barcode)
+        {
+            if (string.IsNullOrWhiteSpace(barcode) || barcode.Length > 50)
+                return BadRequest(new { message = "Invalid barcode" });
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BarcodeLookup");
+                var res = await client.GetAsync(
+                    $"https://api.upcitemdb.com/prod/trial/lookup?upc={Uri.EscapeDataString(barcode)}");
+                if (!res.IsSuccessStatusCode) return NotFound();
+
+                using var stream = await res.Content.ReadAsStreamAsync();
+                using var doc = await JsonDocument.ParseAsync(stream);
+                var root = doc.RootElement;
+
+                if (!root.TryGetProperty("items", out var items) || items.GetArrayLength() == 0)
+                    return NotFound();
+
+                var item = items[0];
+                var name = item.TryGetProperty("title", out var t) ? t.GetString() : null;
+                var brand = item.TryGetProperty("brand", out var b) ? b.GetString() : null;
+
+                if (string.IsNullOrWhiteSpace(name)) return NotFound();
+
+                return Ok(new
+                {
+                    name = name.Length > 200 ? name[..200] : name,
+                    manufacturer = string.IsNullOrWhiteSpace(brand) ? "" : (brand.Length > 200 ? brand[..200] : brand)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "External barcode lookup failed for {Barcode}", barcode);
+                return NotFound();
+            }
         }
 
         [HttpPost]

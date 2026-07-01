@@ -1550,9 +1550,30 @@ document.getElementById('posScanBtn').addEventListener('click', () => {
   });
 });
 
+// Best-effort auto-fill of Name/Manufacturer from a public product database
+// when adding a brand-new medicine by barcode. Never overwrites an existing
+// medicine (only runs when the Add form, not Edit, is open) and never
+// auto-saves — this is a starting point for the user to review, since the
+// lookup is generic consumer-product data, not a pharmaceutical registry.
+async function tryAutoFillFromBarcode(code) {
+  if (editingMedCode) return;
+  try {
+    const res = await apiFetch(`/Medicines/lookup-external/${encodeURIComponent(code)}`);
+    if (!res.ok) return;
+    const info = await res.json();
+    const nameField = document.getElementById('mName');
+    const mfrField = document.getElementById('mManufacturer');
+    let filled = false;
+    if (info.name && !nameField.value.trim()) { nameField.value = info.name; filled = true; }
+    if (info.manufacturer && !mfrField.value.trim()) mfrField.value = info.manufacturer;
+    if (filled) showToast('Auto-filled from barcode — please review before saving', false, true);
+  } catch { /* best-effort only — silent failure is fine, user fills in manually */ }
+}
+
 document.getElementById('mBarcodeScanBtn').addEventListener('click', () => {
   startScanner(code => {
     document.getElementById('mBarcode').value = code;
+    tryAutoFillFromBarcode(code);
   });
 });
 
@@ -1568,6 +1589,7 @@ document.getElementById('medScanBtn').addEventListener('click', () => {
         openAddMedicine();
         document.getElementById('mBarcode').value = code;
         showToast('No medicine found for that barcode — add it below', true);
+        tryAutoFillFromBarcode(code);
       }
     } catch { showToast('Network error looking up barcode', true); }
   });

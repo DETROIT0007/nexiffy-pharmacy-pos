@@ -76,6 +76,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IPasswordHasher<string>, PasswordHasher<string>>();
 builder.Services.AddKeyedSingleton("JwtSecret", jwtSecret);
+builder.Services.AddHttpClient("BarcodeLookup", c => c.Timeout = TimeSpan.FromSeconds(5));
 
 // ── JWT Auth ──────────────────────────────────────────
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
