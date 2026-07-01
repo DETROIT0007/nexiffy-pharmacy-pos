@@ -401,6 +401,12 @@
     .pack-unit-row .pu-price{width:84px}
     .pack-unit-row .pu-label{font-size:.72rem;color:var(--tx-4);white-space:nowrap}
     .pack-unit-row .pu-remove{padding:5px 9px;flex-shrink:0}
+    .pk-row{display:flex;gap:7px;align-items:center;margin-bottom:9px;flex-wrap:wrap}
+    .pk-row input[type="checkbox"]{width:16px;height:16px;flex-shrink:0;cursor:pointer}
+    .pk-row input[type="checkbox"]:disabled{cursor:not-allowed;opacity:.4}
+    .pk-lbl{font-size:.8rem;color:var(--tx-2);white-space:nowrap;font-weight:600}
+    .pk-count{width:60px;padding:7px 8px;font-size:.8rem}
+    .pk-price{width:88px;padding:7px 8px;font-size:.8rem}
 
     /* ── Receipt ────────────────────────────────── */
     .receipt-area{font-family:'Courier New',monospace;font-size:.78rem;background:var(--surface-2);border-radius:8px;padding:16px;max-height:420px;overflow-y:auto;border:1px solid var(--bdr)}
@@ -817,11 +823,31 @@
       </div>
     </div>
     <div style="padding:0 22px 4px">
-      <label style="font-size:.71rem;color:var(--tx-3);font-weight:600;letter-spacing:.01em;display:block;margin-bottom:6px">
-        Pack Units <span style="font-weight:400;color:var(--tx-4)">— larger sellable units built from the base Unit above, e.g. Strip = 10 Tablets</span>
+      <label style="font-size:.71rem;color:var(--tx-3);font-weight:600;letter-spacing:.01em;display:block;margin-bottom:8px">
+        Also sold as Strip / Box? <span style="font-weight:400;color:var(--tx-4)">— set a price for each, and stock stays correct no matter which one sells</span>
       </label>
-      <div id="packUnitRows"></div>
-      <button type="button" class="btn btn-sm btn-ghost" id="addPackUnitBtn" style="margin-top:4px">+ Add Pack Unit</button>
+      <div class="pk-row">
+        <input type="checkbox" id="pkStripEnabled"/>
+        <label for="pkStripEnabled" class="pk-lbl">1 Strip =</label>
+        <input type="number" id="pkStripCount" class="pk-count" min="2" step="1" placeholder="10"/>
+        <span class="pk-lbl" id="pkStripBaseLabel">Tablet</span>
+        <span class="pk-lbl">@ PKR</span>
+        <input type="number" id="pkStripPrice" class="pk-price" min="0.01" step="0.01" placeholder="45.00"/>
+      </div>
+      <div class="pk-row">
+        <input type="checkbox" id="pkBoxEnabled" disabled/>
+        <label for="pkBoxEnabled" class="pk-lbl">1 Box =</label>
+        <input type="number" id="pkBoxCount" class="pk-count" min="2" step="1" placeholder="10"/>
+        <span class="pk-lbl">Strip</span>
+        <span class="pk-lbl">@ PKR</span>
+        <input type="number" id="pkBoxPrice" class="pk-price" min="0.01" step="0.01" placeholder="420.00"/>
+      </div>
+      <button type="button" class="btn btn-sm btn-ghost" id="showAdvancedPackBtn" style="margin-top:2px">+ Advanced (custom pack units)</button>
+      <div id="advancedPackSection" style="display:none;margin-top:8px">
+        <div style="font-size:.68rem;color:var(--tx-4);margin-bottom:6px">For anything other than Strip/Box — e.g. a syrup Bottle, or a non-standard unit.</div>
+        <div id="packUnitRows"></div>
+        <button type="button" class="btn btn-sm btn-ghost" id="addPackUnitBtn">+ Add Custom Pack Unit</button>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="closeMedModalBtn">Cancel</button>
@@ -2042,7 +2068,13 @@ function isExpiringSoon(date) {
   return (new Date(date) - new Date()) / (1000 * 60 * 60 * 24) < 90;
 }
 
-// ── Pack Units (dynamic rows in the Add/Edit Medicine form) ────────
+// ── Pack Units ───────────────────────────────────────────────────
+// Friendly path: two plain-language rows for the common Strip/Box case
+// ("1 Strip = 10 Tablets @ PKR 45", "1 Box = 10 Strip @ PKR 420" — each
+// relative to the level above, the way a pharmacist actually thinks about
+// it), converted to the flat base-unit conversion factors the API expects.
+// Advanced path: the original free-form rows, for anything that isn't a
+// Strip/Box hierarchy (a syrup Bottle, a non-standard unit, etc).
 let _packUnitRowSeq = 0;
 
 function addPackUnitRow(data) {
@@ -2052,7 +2084,7 @@ function addPackUnitRow(data) {
   row.className = 'pack-unit-row';
   row.dataset.rowId = id;
   row.innerHTML = `
-    <input type="text" class="pu-name" placeholder="Strip" maxlength="50" value="${h(data?.unitName || '')}"/>
+    <input type="text" class="pu-name" placeholder="Carton" maxlength="50" value="${h(data?.unitName || '')}"/>
     <span class="pu-label">=</span>
     <input type="number" class="pu-factor" placeholder="10" min="2" step="1" value="${data?.conversionFactor ?? ''}"/>
     <span class="pu-label pu-baseunit">${h(baseUnit)}</span>
@@ -2068,19 +2100,112 @@ document.getElementById('packUnitRows').addEventListener('click', e => {
 });
 
 document.getElementById('addPackUnitBtn').addEventListener('click', () => addPackUnitRow());
+document.getElementById('showAdvancedPackBtn').addEventListener('click', () => {
+  const sec = document.getElementById('advancedPackSection');
+  const showing = sec.style.display !== 'none';
+  sec.style.display = showing ? 'none' : '';
+  document.getElementById('showAdvancedPackBtn').textContent = showing ? '+ Advanced (custom pack units)' : '− Hide advanced';
+});
 
-// Keep each row's "= N <base unit>" label in sync with the base Unit dropdown
+// Keep the base-unit label in sync with the Unit dropdown ("1 Strip = 10 Tablet")
 document.getElementById('mUnit').addEventListener('change', () => {
   const baseUnit = document.getElementById('mUnit').value;
+  document.getElementById('pkStripBaseLabel').textContent = baseUnit;
   document.querySelectorAll('#packUnitRows .pu-baseunit').forEach(el => { el.textContent = baseUnit; });
+});
+
+// Box only makes sense once Strip pricing exists
+document.getElementById('pkStripEnabled').addEventListener('change', () => {
+  const enabled = document.getElementById('pkStripEnabled').checked;
+  document.getElementById('pkBoxEnabled').disabled = !enabled;
+  if (!enabled) document.getElementById('pkBoxEnabled').checked = false;
 });
 
 function clearPackUnitRows() {
   document.getElementById('packUnitRows').innerHTML = '';
 }
 
-// Returns null (with a toast) if a row is incomplete/invalid, so the save
-// handler can bail out instead of silently dropping a half-filled row.
+function resetPackUnitsUI() {
+  document.getElementById('pkStripEnabled').checked = false;
+  document.getElementById('pkBoxEnabled').checked = false;
+  document.getElementById('pkBoxEnabled').disabled = true;
+  document.getElementById('pkStripCount').value = '';
+  document.getElementById('pkStripPrice').value = '';
+  document.getElementById('pkBoxCount').value = '';
+  document.getElementById('pkBoxPrice').value = '';
+  clearPackUnitRows();
+  document.getElementById('advancedPackSection').style.display = 'none';
+  document.getElementById('showAdvancedPackBtn').textContent = '+ Advanced (custom pack units)';
+}
+
+// Reconstructs the Strip/Box fields from a medicine's flat, base-unit-relative
+// packUnits. A clean 1- or 2-level nesting fills Strip/Box directly; anything
+// else (0, 3+, or non-nested factors) is shown as advanced rows instead of
+// force-fitting it, so nothing from existing data is ever silently dropped.
+function populatePackUnitsUI(packUnits) {
+  resetPackUnitsUI();
+  const sorted = [...(packUnits || [])].sort((a, b) => a.conversionFactor - b.conversionFactor);
+
+  if (sorted.length === 1) {
+    document.getElementById('pkStripEnabled').checked = true;
+    document.getElementById('pkBoxEnabled').disabled = false;
+    document.getElementById('pkStripCount').value = sorted[0].conversionFactor;
+    document.getElementById('pkStripPrice').value = sorted[0].price;
+  } else if (sorted.length === 2 && sorted[1].conversionFactor % sorted[0].conversionFactor === 0) {
+    document.getElementById('pkStripEnabled').checked = true;
+    document.getElementById('pkBoxEnabled').disabled = false;
+    document.getElementById('pkStripCount').value = sorted[0].conversionFactor;
+    document.getElementById('pkStripPrice').value = sorted[0].price;
+    document.getElementById('pkBoxEnabled').checked = true;
+    document.getElementById('pkBoxCount').value = sorted[1].conversionFactor / sorted[0].conversionFactor;
+    document.getElementById('pkBoxPrice').value = sorted[1].price;
+  } else if (sorted.length > 0) {
+    sorted.forEach(p => addPackUnitRow(p));
+    document.getElementById('advancedPackSection').style.display = '';
+    document.getElementById('showAdvancedPackBtn').textContent = '− Hide advanced';
+  }
+}
+
+// Returns null (with a toast) if something's incomplete/invalid, so the save
+// handler can bail out instead of silently dropping it.
+function getFriendlyPackUnits() {
+  const result = [];
+  const stripEnabled = document.getElementById('pkStripEnabled').checked;
+  const boxEnabled = document.getElementById('pkBoxEnabled').checked;
+  let stripFactor = null;
+
+  if (stripEnabled) {
+    const count = parseInt(document.getElementById('pkStripCount').value);
+    const price = parseFloat(document.getElementById('pkStripPrice').value);
+    if (isNaN(count) || count < 2 || isNaN(price) || price <= 0) {
+      showToast('Enter a valid Strip count (2 or more) and price', true);
+      return null;
+    }
+    stripFactor = count;
+    result.push({ unitName: 'Strip', conversionFactor: count, price });
+  }
+
+  if (boxEnabled) {
+    const count = parseInt(document.getElementById('pkBoxCount').value);
+    const price = parseFloat(document.getElementById('pkBoxPrice').value);
+    if (isNaN(count) || count < 2 || isNaN(price) || price <= 0) {
+      showToast('Enter a valid Box count (2 or more) and price', true);
+      return null;
+    }
+    result.push({ unitName: 'Box', conversionFactor: stripFactor * count, price });
+  }
+
+  const advanced = getPackUnitsFromForm();
+  if (advanced === null) return null;
+  const names = result.concat(advanced).map(p => p.unitName.toLowerCase());
+  if (new Set(names).size !== names.length) {
+    showToast('Pack unit names must be unique — rename the custom unit if it clashes with Strip/Box', true);
+    return null;
+  }
+  return result.concat(advanced);
+}
+
+// Advanced (custom) rows only — used internally by getFriendlyPackUnits()
 function getPackUnitsFromForm() {
   const rows = document.querySelectorAll('#packUnitRows .pack-unit-row');
   const result = [];
@@ -2090,7 +2215,7 @@ function getPackUnitsFromForm() {
     const price = parseFloat(row.querySelector('.pu-price').value);
     if (!unitName && isNaN(conversionFactor) && isNaN(price)) continue; // fully empty row, ignore
     if (!unitName || isNaN(conversionFactor) || conversionFactor < 2 || isNaN(price) || price <= 0) {
-      showToast('Each pack unit needs a name, a base-unit count of at least 2, and a positive price', true);
+      showToast('Each custom pack unit needs a name, a base-unit count of at least 2, and a positive price', true);
       return null;
     }
     result.push({ unitName, conversionFactor, price });
@@ -2105,7 +2230,8 @@ function openAddMedicine() {
   ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer','mBarcode'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('mUnit').value = 'Strip';
   document.getElementById('mCode').disabled = false;
-  clearPackUnitRows();
+  document.getElementById('pkStripBaseLabel').textContent = 'Strip';
+  populatePackUnitsUI([]);
   document.getElementById('medModal').classList.add('open');
 }
 
@@ -2127,8 +2253,8 @@ async function openEditMedicine(code) {
     document.getElementById('mExpiry').value = m.expiryDate || '';
     document.getElementById('mManufacturer').value = m.manufacturer;
     document.getElementById('mBarcode').value = m.barcode || '';
-    clearPackUnitRows();
-    (m.packUnits || []).forEach(p => addPackUnitRow(p));
+    document.getElementById('pkStripBaseLabel').textContent = m.unit;
+    populatePackUnitsUI(m.packUnits || []);
     document.getElementById('medModal').classList.add('open');
   } catch { showToast('Could not load medicine', true); }
 }
@@ -2140,11 +2266,11 @@ document.getElementById('closeMedModalBtn').addEventListener('click', () => {
   ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer','mBarcode']
     .forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('mUnit').value = 'Strip';
-  clearPackUnitRows();
+  resetPackUnitsUI();
 });
 
 document.getElementById('medSaveBtn').addEventListener('click', async () => {
-  const packUnits = getPackUnitsFromForm();
+  const packUnits = getFriendlyPackUnits();
   if (packUnits === null) return;
   const med = {
     code: document.getElementById('mCode').value.trim(),
