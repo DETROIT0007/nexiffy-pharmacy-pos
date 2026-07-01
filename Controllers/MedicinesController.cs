@@ -88,6 +88,12 @@ namespace Nexiffy.Controllers
                 var client = _httpClientFactory.CreateClient("BarcodeLookup");
                 var res = await client.GetAsync(
                     $"https://api.upcitemdb.com/prod/trial/lookup?upc={Uri.EscapeDataString(barcode)}");
+                if (res.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    _logger.LogWarning(
+                        "External barcode lookup rate-limited (free tier is 100/day, 6/min) for {Barcode}", barcode);
+                    return NotFound();
+                }
                 if (!res.IsSuccessStatusCode) return NotFound();
 
                 using var stream = await res.Content.ReadAsStreamAsync();
