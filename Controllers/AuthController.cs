@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Nexiffy.Data;
 using Nexiffy.Models;
@@ -21,6 +22,7 @@ namespace Nexiffy.Controllers
         private readonly ILogger<AuthController> _logger;
         private readonly IWebHostEnvironment _env;
         private readonly AppDbContext _context;
+        private readonly string _jwtSecret;
 
         // Lock the account for 15 minutes after 10 consecutive failures
         private const int MaxFailedAttempts = 10;
@@ -33,13 +35,15 @@ namespace Nexiffy.Controllers
             IPasswordHasher<string> hasher,
             ILogger<AuthController> logger,
             IWebHostEnvironment env,
-            AppDbContext context)
+            AppDbContext context,
+            [FromKeyedServices("JwtSecret")] string jwtSecret)
         {
-            _config  = config;
-            _hasher  = hasher;
-            _logger  = logger;
-            _env     = env;
-            _context = context;
+            _config     = config;
+            _hasher     = hasher;
+            _logger     = logger;
+            _env        = env;
+            _context    = context;
+            _jwtSecret  = jwtSecret;
         }
 
         // ── Helpers ──────────────────────────────────────────────
@@ -149,8 +153,7 @@ namespace Nexiffy.Controllers
             await ResetLockoutAsync();
 
             // Issue JWT with a unique JTI so individual tokens can be revoked at logout
-            var jwtSecret = GetJwtSecretFromFile();
-            var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+            var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
                 issuer: "nexiffy-pharmacy",
@@ -243,15 +246,6 @@ namespace Nexiffy.Controllers
             await _context.SaveChangesAsync();
             _logger.LogInformation("Password changed by {User}", User.Identity?.Name);
             return Ok(new { message = "Password changed successfully" });
-        }
-
-        // Read the JWT secret from the same OS file Program.cs created
-        private static string GetJwtSecretFromFile()
-        {
-            var keyPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "Nexiffy", "jwt.key");
-            return System.IO.File.ReadAllText(keyPath).Trim();
         }
     }
 }

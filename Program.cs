@@ -75,6 +75,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IPasswordHasher<string>, PasswordHasher<string>>();
+builder.Services.AddKeyedSingleton("JwtSecret", jwtSecret);
 
 // ── JWT Auth ──────────────────────────────────────────
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
