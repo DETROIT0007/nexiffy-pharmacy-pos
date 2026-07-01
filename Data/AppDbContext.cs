@@ -13,6 +13,7 @@ namespace Nexiffy.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<AppSetting> AppSettings { get; set; }
         public DbSet<RevokedToken> RevokedTokens { get; set; }
+        public DbSet<MedicinePackUnit> MedicinePackUnits { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -38,6 +39,14 @@ namespace Nexiffy.Data
             modelBuilder.Entity<RevokedToken>()
                 .HasIndex(t => t.ExpiresAt)
                 .HasDatabaseName("IX_RevokedTokens_ExpiresAt");
+            modelBuilder.Entity<MedicinePackUnit>()
+                .HasIndex(p => p.MedicineCode)
+                .HasDatabaseName("IX_MedicinePackUnits_MedicineCode");
+            modelBuilder.Entity<MedicinePackUnit>()
+                .HasOne<Medicine>()
+                .WithMany(m => m.PackUnits)
+                .HasForeignKey(p => p.MedicineCode)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Medicine>().HasData(
                 new Medicine { Code = "MED-001", Name = "Panadol 500mg",     GenericName = "Paracetamol",              Category = "Painkiller",     Unit = "Strip",  Price = 85.00m,  Stock = 500,  ExpiryDate = "2027-06-30", Manufacturer = "GSK"       },

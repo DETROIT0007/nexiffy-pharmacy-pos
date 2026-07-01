@@ -34,7 +34,7 @@ namespace Nexiffy.Controllers
             if (page > 100000) page = 100000;
             if (pageSize < 1 || pageSize > 500) pageSize = 20;
 
-            var query = _context.Medicines.AsQueryable();
+            var query = _context.Medicines.Include(m => m.PackUnits).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(m =>
@@ -58,14 +58,14 @@ namespace Nexiffy.Controllers
         [HttpGet("{code}")]
         public async Task<ActionResult<Medicine>> GetOne(string code)
         {
-            var med = await _context.Medicines.FirstOrDefaultAsync(m => m.Code == code);
+            var med = await _context.Medicines.Include(m => m.PackUnits).FirstOrDefaultAsync(m => m.Code == code);
             return med == null ? NotFound() : Ok(med);
         }
 
         [HttpGet("barcode/{barcode}")]
         public async Task<ActionResult<Medicine>> GetByBarcode(string barcode)
         {
-            var med = await _context.Medicines.FirstOrDefaultAsync(m => m.Barcode == barcode);
+            var med = await _context.Medicines.Include(m => m.PackUnits).FirstOrDefaultAsync(m => m.Barcode == barcode);
             return med == null ? NotFound() : Ok(med);
         }
 
@@ -122,6 +122,19 @@ namespace Nexiffy.Controllers
             }
         }
 
+        // A pack unit name must be unique per medicine and can't duplicate the
+        // base Unit (e.g. base "Tablet" and a pack unit also named "Tablet"
+        // would be ambiguous when resolving a sale).
+        private static string? ValidatePackUnits(Medicine medicine)
+        {
+            var names = medicine.PackUnits.Select(p => p.UnitName.Trim()).ToList();
+            if (names.Any(n => n.Equals(medicine.Unit.Trim(), StringComparison.OrdinalIgnoreCase)))
+                return "A pack unit name can't match the base Unit";
+            if (names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Count)
+                return "Pack unit names must be unique";
+            return null;
+        }
+
         [HttpPost]
         public async Task<ActionResult<Medicine>> Create(Medicine medicine)
         {
@@ -131,7 +144,11 @@ namespace Nexiffy.Controllers
             if (await _context.Medicines.IgnoreQueryFilters().AnyAsync(m => m.Code == medicine.Code))
                 return Conflict(new { message = "Medicine code already exists" });
 
+            var packErr = ValidatePackUnits(medicine);
+            if (packErr != null) return BadRequest(new { message = packErr });
+
             medicine.LastUpdated = DateTime.UtcNow;
+            foreach (var p in medicine.PackUnits) p.MedicineCode = medicine.Code;
             _context.Medicines.Add(medicine);
             await _context.SaveChangesAsync();
 
@@ -150,6 +167,9 @@ namespace Nexiffy.Controllers
             var existing = await _context.Medicines.FirstOrDefaultAsync(m => m.Code == code);
             if (existing == null) return NotFound();
 
+            var packErr = ValidatePackUnits(medicine);
+            if (packErr != null) return BadRequest(new { message = packErr });
+
             _logger.LogInformation(
                 "Medicine '{Code}' updated by {User} — Price: {OldPrice}->{NewPrice}, Stock: {OldStock}->{NewStock}",
                 code, User.Identity?.Name, existing.Price, medicine.Price, existing.Stock, medicine.Stock);
@@ -164,6 +184,17 @@ namespace Nexiffy.Controllers
             existing.Manufacturer = medicine.Manufacturer;
             existing.Barcode      = medicine.Barcode;
             existing.LastUpdated  = DateTime.UtcNow;
+
+            // Replace-all: simplest correct way to sync the pack unit list,
+            // since the form always submits the full current set.
+            await _context.MedicinePackUnits.Where(p => p.MedicineCode == code).ExecuteDeleteAsync();
+            foreach (var p in medicine.PackUnits)
+            {
+                p.Id = 0;
+                p.MedicineCode = code;
+                _context.MedicinePackUnits.Add(p);
+            }
+
             await _context.SaveChangesAsync();
             return Ok(existing);
         }

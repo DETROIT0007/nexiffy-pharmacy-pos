@@ -106,6 +106,7 @@ namespace Nexiffy.Controllers
                 // Batch-load all medicines in one query to avoid N+1 inside the SERIALIZABLE transaction
                 var itemCodes = bill.Items.Select(i => i.MedicineCode).Distinct().ToList();
                 var medicines = await _context.Medicines
+                    .Include(m => m.PackUnits)
                     .Where(m => itemCodes.Contains(m.Code))
                     .ToDictionaryAsync(m => m.Code);
 
@@ -114,13 +115,32 @@ namespace Nexiffy.Controllers
                     if (!medicines.TryGetValue(item.MedicineCode, out var med))
                         return BadRequest(new { message = $"Medicine '{item.MedicineCode}' not found" });
 
-                    // Override client-supplied rate and amount with server-authoritative values
-                    item.Rate   = med.Price;
-                    item.Amount = Math.Round(item.Rate * item.Qty, 2);
+                    // Resolve rate + base-unit conversion from the medicine's own
+                    // data (never trust client-supplied rate/unit): either the
+                    // base Unit itself, or one of its defined pack units
+                    // (e.g. "Strip" = 10 base units, "Box" = 100).
+                    int conversionFactor = 1;
+                    decimal unitPrice = med.Price;
+                    if (!string.IsNullOrWhiteSpace(item.Unit) && !item.Unit.Equals(med.Unit, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var pack = med.PackUnits.FirstOrDefault(p => p.UnitName.Equals(item.Unit, StringComparison.OrdinalIgnoreCase));
+                        if (pack == null)
+                            return BadRequest(new { message = $"Unknown unit '{item.Unit}' for {med.Name}" });
+                        conversionFactor = pack.ConversionFactor;
+                        unitPrice = pack.Price;
+                    }
+                    else
+                    {
+                        item.Unit = med.Unit;
+                    }
 
-                    var deduct = (int)item.Qty;
+                    item.Rate           = unitPrice;
+                    item.Amount         = Math.Round(item.Rate * item.Qty, 2);
+                    item.ConversionFactor = conversionFactor;
+
+                    var deduct = (int)item.Qty * conversionFactor;
                     if (med.Stock < deduct)
-                        return BadRequest(new { message = $"Insufficient stock for {med.Name}. Available: {med.Stock}" });
+                        return BadRequest(new { message = $"Insufficient stock for {med.Name}. Available: {med.Stock} {med.Unit}" });
 
                     med.Stock -= deduct;
                     med.LastUpdated = DateTime.UtcNow;
@@ -202,7 +222,10 @@ namespace Nexiffy.Controllers
                 {
                     if (cancelMeds.TryGetValue(item.MedicineCode, out var med))
                     {
-                        med.Stock += (int)item.Qty;
+                        // Use the ConversionFactor recorded at sale time, not
+                        // whatever the medicine's pack units say now — those
+                        // may have changed or been removed since.
+                        med.Stock += (int)item.Qty * item.ConversionFactor;
                         med.LastUpdated = DateTime.UtcNow;
                     }
                     else

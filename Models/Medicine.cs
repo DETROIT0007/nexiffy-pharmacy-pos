@@ -52,6 +52,34 @@ namespace Nexiffy.Models
         public DateTime? LastUpdated { get; set; }
 
         public bool IsDeleted { get; set; } = false;
+
+        // Larger sellable units built from the base Unit above (e.g. base
+        // Unit="Tablet", a pack unit "Strip" = 10 Tablets, "Box" = 100
+        // Tablets). Stock is always tracked in base units regardless of
+        // which unit a sale used.
+        public List<MedicinePackUnit> PackUnits { get; set; } = new();
+    }
+
+    public class MedicinePackUnit
+    {
+        public int Id { get; set; }
+
+        // Set server-side from the parent medicine, never by the client.
+        [MaxLength(50)]
+        public string MedicineCode { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(50)]
+        public string UnitName { get; set; } = string.Empty;
+
+        // How many of the medicine's base Unit one of these equals
+        // (e.g. Strip -> 10, Box -> 100 when base Unit is Tablet).
+        [Range(2, 100000, ErrorMessage = "Must contain at least 2 base units")]
+        public int ConversionFactor { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        [Range(0.01, 999999.99, ErrorMessage = "Price must be between 0.01 and 999,999.99")]
+        public decimal Price { get; set; }
     }
 
     public class Bill
@@ -119,6 +147,12 @@ namespace Nexiffy.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
+
+        // How many of the medicine's base Unit this line's Qty*ConversionFactor
+        // represents — set server-side at sale time and reused as-is on
+        // cancellation, so stock restore is correct even if the medicine's
+        // pack units are edited or removed later.
+        public int ConversionFactor { get; set; } = 1;
     }
 
     public record LoginRequest(string Username, string Password);

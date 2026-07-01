@@ -330,6 +330,14 @@
     .med-card .mgen{font-size:.68rem;color:var(--tx-4);margin-bottom:8px;line-height:1.3}
     .med-card .mprice{color:var(--primary);font-weight:800;font-size:.95rem}
     .med-card .mstock{font-size:.67rem;margin-top:4px;font-weight:500;color:var(--tx-3)}
+    .pack-btns{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+    .pack-btn{
+      background:var(--primary-light);color:var(--primary);border:none;border-radius:6px;
+      padding:3px 7px;font-size:.66rem;font-weight:700;cursor:pointer;font-family:inherit;
+      transition:background .15s;
+    }
+    .pack-btn:hover{background:var(--primary-subtle)}
+    .pack-btn:active{transform:scale(.95)}
 
     /* ── Cart ───────────────────────────────────── */
     .cart-section{padding:11px 13px;border-bottom:1px solid var(--divide);background:var(--surface-3)}
@@ -386,6 +394,13 @@
     .form-col label{font-size:.71rem;color:var(--tx-3);font-weight:600;letter-spacing:.01em}
     .form-col input,.form-col select{width:100%}
     .modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:13px 22px;border-top:1px solid var(--divide);margin-top:0}
+    .pack-unit-row{display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap}
+    .pack-unit-row input{padding:7px 9px;font-size:.8rem}
+    .pack-unit-row .pu-name{flex:1.2;min-width:80px}
+    .pack-unit-row .pu-factor{width:64px}
+    .pack-unit-row .pu-price{width:84px}
+    .pack-unit-row .pu-label{font-size:.72rem;color:var(--tx-4);white-space:nowrap}
+    .pack-unit-row .pu-remove{padding:5px 9px;flex-shrink:0}
 
     /* ── Receipt ────────────────────────────────── */
     .receipt-area{font-family:'Courier New',monospace;font-size:.78rem;background:var(--surface-2);border-radius:8px;padding:16px;max-height:420px;overflow-y:auto;border:1px solid var(--bdr)}
@@ -800,6 +815,13 @@
           <button type="button" class="btn btn-ghost" id="mBarcodeScanBtn" title="Scan barcode with camera" aria-label="Scan barcode with camera"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg></button>
         </div>
       </div>
+    </div>
+    <div style="padding:0 22px 4px">
+      <label style="font-size:.71rem;color:var(--tx-3);font-weight:600;letter-spacing:.01em;display:block;margin-bottom:6px">
+        Pack Units <span style="font-weight:400;color:var(--tx-4)">— larger sellable units built from the base Unit above, e.g. Strip = 10 Tablets</span>
+      </label>
+      <div id="packUnitRows"></div>
+      <button type="button" class="btn btn-sm btn-ghost" id="addPackUnitBtn" style="margin-top:4px">+ Add Pack Unit</button>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="closeMedModalBtn">Cancel</button>
@@ -1625,12 +1647,17 @@ function renderPosMeds(list) {
       <div class="mgen">${h(m.genericName)}</div>
       <div class="mprice">PKR ${h(fmt(m.price))}</div>
       <div class="mstock" style="color:${stockColor};font-weight:${stockBold ? '700' : '400'}">Stock: ${h(m.stock.toString())} ${h(m.unit)}${m.stock < 20 && m.stock > 0 ? ' <span class="badge badge-low">Low</span>' : ''}</div>
+      ${m.packUnits && m.packUnits.length ? `<div class="pack-btns">${m.packUnits.map(p =>
+        `<button type="button" class="pack-btn" data-code="${h(m.code)}" data-unit="${h(p.unitName)}">+ ${h(p.unitName)} PKR ${h(fmt(p.price))}</button>`
+      ).join('')}</div>` : ''}
     </div>`;
   }).join('');
 }
 
 // Event delegation — no inline onclick, prevents injection
 document.getElementById('posMedGrid').addEventListener('click', e => {
+  const packBtn = e.target.closest('.pack-btn');
+  if (packBtn) { addToCart(packBtn.dataset.code, packBtn.dataset.unit); return; }
   const card = e.target.closest('.med-card:not(.out-of-stock)');
   if (card?.dataset.code) addToCart(card.dataset.code);
 });
@@ -1642,7 +1669,9 @@ function focusPosSearch() {
   setTimeout(() => document.getElementById('posSearch').focus(), 100);
 }
 
-// Enter key on hardware (USB/Bluetooth keyboard-wedge) barcode scanner auto-adds to cart
+// Enter key on hardware (USB/Bluetooth keyboard-wedge) barcode scanner auto-adds to cart.
+// Always adds the base unit — a scanner can't tell you which pack level was
+// meant, so use the pack-unit buttons on the card for Strip/Box sales.
 document.getElementById('posSearch').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     const q = e.target.value.trim();
@@ -1658,61 +1687,98 @@ document.getElementById('posSearch').addEventListener('keydown', e => {
   }
 });
 
-function addToCart(code) {
+// Resolves a unit name to its price/base-unit-conversion, whether it's the
+// medicine's own base Unit or one of its defined pack units (Strip, Box, ...).
+function resolveUnit(med, unitName) {
+  if (!unitName || unitName === med.unit) {
+    return { unitName: med.unit, rate: med.price, conversionFactor: 1 };
+  }
+  const pack = (med.packUnits || []).find(p => p.unitName === unitName);
+  if (!pack) return null;
+  return { unitName: pack.unitName, rate: pack.price, conversionFactor: pack.conversionFactor };
+}
+
+// A medicine can appear as more than one cart line at once (e.g. 3 loose
+// Tablets AND 2 Strips of the same medicine in one bill), so stock checks
+// must sum base-unit usage across every line for that medicine, not just
+// the one being changed.
+function baseUnitsInCart(code, excludeUnit) {
+  return cart.filter(i => i.code === code && i.unit !== excludeUnit)
+    .reduce((sum, i) => sum + i.qty * i.conversionFactor, 0);
+}
+
+function addToCart(code, unitName) {
   const med = allMedicines.find(m => m.code === code);
   if (!med) return;
-  const ex = cart.find(i => i.code === code);
+  const resolved = resolveUnit(med, unitName || med.unit);
+  if (!resolved) { showToast('Unknown unit for this medicine', true); return; }
+
+  const ex = cart.find(i => i.code === code && i.unit === resolved.unitName);
+  const otherBaseUnits = baseUnitsInCart(code, resolved.unitName);
+  const wantQty = (ex ? ex.qty : 0) + 1;
+  if (otherBaseUnits + wantQty * resolved.conversionFactor > med.stock) {
+    showToast('Insufficient stock', true); return;
+  }
+
   if (ex) {
-    if (ex.qty >= med.stock) { showToast('Insufficient stock', true); return; }
     ex.qty++;
     ex.amount = +(ex.qty * ex.rate).toFixed(2);
   } else {
-    cart.push({ code: med.code, name: med.name, unit: med.unit, qty: 1, rate: med.price, amount: +med.price.toFixed(2) });
+    cart.push({
+      code: med.code, name: med.name, unit: resolved.unitName, qty: 1,
+      rate: resolved.rate, amount: +resolved.rate.toFixed(2),
+      conversionFactor: resolved.conversionFactor
+    });
   }
   saveCart();
   renderCart();
-  showToast(`Added: ${med.name}`);
+  showToast(`Added: ${med.name}${resolved.unitName !== med.unit ? ' (' + resolved.unitName + ')' : ''}`);
 }
 
 document.getElementById('cartItems').addEventListener('click', e => {
   const row = e.target.closest('[data-cartcode]');
   if (!row) return;
-  const code = row.dataset.cartcode;
-  if (e.target.classList.contains('qty-minus')) changeQty(code, -1);
-  else if (e.target.classList.contains('qty-plus')) changeQty(code, 1);
-  else if (e.target.classList.contains('rm-btn')) removeFromCart(code);
+  const code = row.dataset.cartcode, unit = row.dataset.cartunit;
+  if (e.target.classList.contains('qty-minus')) changeQty(code, unit, -1);
+  else if (e.target.classList.contains('qty-plus')) changeQty(code, unit, 1);
+  else if (e.target.classList.contains('rm-btn')) removeFromCart(code, unit);
 });
 
 document.getElementById('cartItems').addEventListener('change', e => {
   const inp = e.target.closest('.qty-input');
-  if (inp) setQty(inp.dataset.cartcode, inp.value);
+  if (inp) setQty(inp.dataset.cartcode, inp.dataset.cartunit, inp.value);
 });
 
-function changeQty(code, delta) {
-  const item = cart.find(i => i.code === code);
-  const med = allMedicines.find(m => m.code === code);
+function changeQty(code, unit, delta) {
+  const item = cart.find(i => i.code === code && i.unit === unit);
   if (!item) return;
   const newQty = Math.max(1, item.qty + delta);
-  if (med && newQty > med.stock) { showToast('Insufficient stock', true); return; }
+  const otherBaseUnits = baseUnitsInCart(code, unit);
+  const med = allMedicines.find(m => m.code === code);
+  if (med && otherBaseUnits + newQty * item.conversionFactor > med.stock) {
+    showToast('Insufficient stock', true); return;
+  }
   item.qty = newQty;
   item.amount = +(item.qty * item.rate).toFixed(2);
-  if (item.qty <= 0) cart = cart.filter(i => i.code !== code);
   saveCart(); renderCart();
 }
 
-function setQty(code, val) {
-  const item = cart.find(i => i.code === code);
-  const med = allMedicines.find(m => m.code === code);
+function setQty(code, unit, val) {
+  const item = cart.find(i => i.code === code && i.unit === unit);
   const q = parseInt(val);
   if (!item || isNaN(q) || q < 1) return;
-  if (med && q > med.stock) { showToast('Insufficient stock', true); renderCart(); return; }
+  const otherBaseUnits = baseUnitsInCart(code, unit);
+  const med = allMedicines.find(m => m.code === code);
+  if (med && otherBaseUnits + q * item.conversionFactor > med.stock) {
+    showToast('Insufficient stock', true); renderCart(); return;
+  }
   item.qty = q;
   item.amount = +(item.qty * item.rate).toFixed(2);
   saveCart(); renderCart();
 }
 
-function removeFromCart(code) {
-  cart = cart.filter(i => i.code !== code);
+function removeFromCart(code, unit) {
+  cart = cart.filter(i => !(i.code === code && i.unit === unit));
   saveCart(); renderCart();
 }
 
@@ -1723,11 +1789,11 @@ function renderCart() {
     updatePosTotals(); return;
   }
   el.innerHTML = cart.map(i => `
-    <div class="cart-row" data-cartcode="${h(i.code)}">
+    <div class="cart-row" data-cartcode="${h(i.code)}" data-cartunit="${h(i.unit)}">
       <div><div class="cn">${h(i.name)}</div><div class="cs">${h(i.code)} · ${h(i.unit)} · PKR ${h(fmt(i.rate))}</div></div>
       <div class="qty-ctrl">
         <button class="qty-minus">−</button>
-        <input type="number" class="qty-input" aria-label="Quantity for ${h(i.name)}" data-cartcode="${h(i.code)}" value="${h(i.qty.toString())}" min="1" step="1"/>
+        <input type="number" class="qty-input" aria-label="Quantity for ${h(i.name)}" data-cartcode="${h(i.code)}" data-cartunit="${h(i.unit)}" value="${h(i.qty.toString())}" min="1" step="1"/>
         <button class="qty-plus">+</button>
       </div>
       <div class="ca">PKR ${h(fmt(i.amount))}</div>
@@ -1763,7 +1829,7 @@ document.getElementById('printCartBtn').addEventListener('click', async () => {
     id: '---', date: new Date().toLocaleDateString('en-PK'),
     patientName, patientCode, discount,
     totalAmount: sub - discount,
-    items: cart.map(i => ({ medicineName: i.name, qty: i.qty, rate: i.rate, amount: i.amount }))
+    items: cart.map(i => ({ medicineName: i.name, unit: i.unit, qty: i.qty, rate: i.rate, amount: i.amount }))
   });
   // Save after printing
   await saveBill(false);
@@ -1976,6 +2042,62 @@ function isExpiringSoon(date) {
   return (new Date(date) - new Date()) / (1000 * 60 * 60 * 24) < 90;
 }
 
+// ── Pack Units (dynamic rows in the Add/Edit Medicine form) ────────
+let _packUnitRowSeq = 0;
+
+function addPackUnitRow(data) {
+  const id = ++_packUnitRowSeq;
+  const baseUnit = document.getElementById('mUnit').value;
+  const row = document.createElement('div');
+  row.className = 'pack-unit-row';
+  row.dataset.rowId = id;
+  row.innerHTML = `
+    <input type="text" class="pu-name" placeholder="Strip" maxlength="50" value="${h(data?.unitName || '')}"/>
+    <span class="pu-label">=</span>
+    <input type="number" class="pu-factor" placeholder="10" min="2" step="1" value="${data?.conversionFactor ?? ''}"/>
+    <span class="pu-label pu-baseunit">${h(baseUnit)}</span>
+    <span class="pu-label">@ PKR</span>
+    <input type="number" class="pu-price" placeholder="45.00" min="0.01" step="0.01" value="${data?.price ?? ''}"/>
+    <button type="button" class="btn btn-ghost pu-remove" aria-label="Remove pack unit">✕</button>
+  `;
+  document.getElementById('packUnitRows').appendChild(row);
+}
+
+document.getElementById('packUnitRows').addEventListener('click', e => {
+  if (e.target.classList.contains('pu-remove')) e.target.closest('.pack-unit-row').remove();
+});
+
+document.getElementById('addPackUnitBtn').addEventListener('click', () => addPackUnitRow());
+
+// Keep each row's "= N <base unit>" label in sync with the base Unit dropdown
+document.getElementById('mUnit').addEventListener('change', () => {
+  const baseUnit = document.getElementById('mUnit').value;
+  document.querySelectorAll('#packUnitRows .pu-baseunit').forEach(el => { el.textContent = baseUnit; });
+});
+
+function clearPackUnitRows() {
+  document.getElementById('packUnitRows').innerHTML = '';
+}
+
+// Returns null (with a toast) if a row is incomplete/invalid, so the save
+// handler can bail out instead of silently dropping a half-filled row.
+function getPackUnitsFromForm() {
+  const rows = document.querySelectorAll('#packUnitRows .pack-unit-row');
+  const result = [];
+  for (const row of rows) {
+    const unitName = row.querySelector('.pu-name').value.trim();
+    const conversionFactor = parseInt(row.querySelector('.pu-factor').value);
+    const price = parseFloat(row.querySelector('.pu-price').value);
+    if (!unitName && isNaN(conversionFactor) && isNaN(price)) continue; // fully empty row, ignore
+    if (!unitName || isNaN(conversionFactor) || conversionFactor < 2 || isNaN(price) || price <= 0) {
+      showToast('Each pack unit needs a name, a base-unit count of at least 2, and a positive price', true);
+      return null;
+    }
+    result.push({ unitName, conversionFactor, price });
+  }
+  return result;
+}
+
 function openAddMedicine() {
   editingMedCode = null;
   document.getElementById('medModalTitle').textContent = 'Add New Medicine';
@@ -1983,6 +2105,7 @@ function openAddMedicine() {
   ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer','mBarcode'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('mUnit').value = 'Strip';
   document.getElementById('mCode').disabled = false;
+  clearPackUnitRows();
   document.getElementById('medModal').classList.add('open');
 }
 
@@ -2004,6 +2127,8 @@ async function openEditMedicine(code) {
     document.getElementById('mExpiry').value = m.expiryDate || '';
     document.getElementById('mManufacturer').value = m.manufacturer;
     document.getElementById('mBarcode').value = m.barcode || '';
+    clearPackUnitRows();
+    (m.packUnits || []).forEach(p => addPackUnitRow(p));
     document.getElementById('medModal').classList.add('open');
   } catch { showToast('Could not load medicine', true); }
 }
@@ -2015,9 +2140,12 @@ document.getElementById('closeMedModalBtn').addEventListener('click', () => {
   ['mCode','mName','mGeneric','mCategory','mPrice','mStock','mExpiry','mManufacturer','mBarcode']
     .forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('mUnit').value = 'Strip';
+  clearPackUnitRows();
 });
 
 document.getElementById('medSaveBtn').addEventListener('click', async () => {
+  const packUnits = getPackUnitsFromForm();
+  if (packUnits === null) return;
   const med = {
     code: document.getElementById('mCode').value.trim(),
     name: document.getElementById('mName').value.trim(),
@@ -2028,7 +2156,8 @@ document.getElementById('medSaveBtn').addEventListener('click', async () => {
     stock: parseInt(document.getElementById('mStock').value) || 0,
     expiryDate: document.getElementById('mExpiry').value || null,
     barcode: document.getElementById('mBarcode').value.trim() || null,
-    manufacturer: document.getElementById('mManufacturer').value.trim()
+    manufacturer: document.getElementById('mManufacturer').value.trim(),
+    packUnits
   };
   if (!med.code || !med.name || !med.price) { showToast('Code, Name and Price are required', true); return; }
   if (!/^[A-Za-z0-9]([A-Za-z0-9\-]{0,48}[A-Za-z0-9])?$/.test(med.code)) { showToast('Code must start/end with alphanumeric; hyphens allowed in the middle only', true); return; }
@@ -2139,7 +2268,7 @@ async function viewBill(id) {
         <thead><tr><th style="text-align:left">Medicine</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
         <tbody>${b.items.map(i => `<tr>
           <td>${h(i.medicineName)}</td>
-          <td style="text-align:center">${h(i.qty.toString())}</td>
+          <td style="text-align:center">${h(i.qty.toString())} ${h(i.unit || '')}</td>
           <td style="text-align:right">PKR ${h(fmt(i.rate))}</td>
           <td style="text-align:right">PKR ${h(fmt(i.amount))}</td>
         </tr>`).join('')}</tbody>
@@ -2229,7 +2358,7 @@ function printReceipt(b) {
       <thead><tr><th style="text-align:left">Item</th><th>Qty</th><th>Rate</th><th>Amt</th></tr></thead>
       <tbody>${b.items.map(i => `<tr>
         <td>${e(i.medicineName)}</td>
-        <td style="text-align:center">${e(i.qty)}</td>
+        <td style="text-align:center">${e(i.qty)} ${e(i.unit || '')}</td>
         <td style="text-align:right">${Number(i.rate).toFixed(2)}</td>
         <td style="text-align:right">${Number(i.amount).toFixed(2)}</td>
       </tr>`).join('')}</tbody>
