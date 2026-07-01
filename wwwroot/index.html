@@ -253,6 +253,10 @@
     .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--bdr);overflow:hidden;margin-bottom:16px;transition:background .25s,border-color .25s,box-shadow .2s}
     .card-header{padding:16px 20px;border-bottom:1px solid var(--divide);display:flex;align-items:center;justify-content:space-between;background:var(--surface)}
     .card-header h3{font-size:.9rem;font-weight:700;color:var(--tx)}
+    /* Tables are wider than a phone screen — scroll horizontally inside their
+       own wrapper instead of letting .card's overflow:hidden silently clip
+       columns (Actions button was unreachable on mobile before this). */
+    .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
     table{width:100%;border-collapse:collapse;font-size:.82rem}
     th{
       background:var(--surface-2);padding:12px 16px;text-align:left;
@@ -503,6 +507,11 @@
       .stat-grid{grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
       .content{padding:12px 14px}
       .topbar{padding:0 14px}
+      .topbar h2{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .topbar-right{overflow-x:auto;flex-shrink:1;scrollbar-width:none}
+      .topbar-right::-webkit-scrollbar{display:none}
+      .topbar-right>*{flex-shrink:0}
+      #changePassBtn .btn-label{display:none}
     }
 
     /* ── Print receipt overlay ───────────────────── */
@@ -599,7 +608,7 @@
         <button class="btn-theme" id="themeToggleBtn" aria-label="Toggle dark mode" title="Toggle dark mode" onclick="toggleTheme()">
           <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <button class="btn btn-ghost" id="changePassBtn" style="padding:5px 11px;font-size:.78rem"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Password</button>
+        <button class="btn btn-ghost" id="changePassBtn" style="padding:5px 11px;font-size:.78rem"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span class="btn-label"> Password</span></button>
         <button class="btn-logout" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -656,13 +665,13 @@
         <!-- Top medicines + Recent bills -->
         <div class="card">
           <div class="card-header"><h3>Top Medicines Sold</h3></div>
-          <table><thead><tr><th>#</th><th>Medicine</th><th>Qty Sold</th></tr></thead>
-          <tbody id="topMedTable"><tr class="loading-row"><td colspan="3"><span class="spinner"></span>Loading…</td></tr></tbody></table>
+          <div class="table-scroll"><table><thead><tr><th>#</th><th>Medicine</th><th>Qty Sold</th></tr></thead>
+          <tbody id="topMedTable"><tr class="loading-row"><td colspan="3"><span class="spinner"></span>Loading…</td></tr></tbody></table></div>
         </div>
         <div class="card">
           <div class="card-header"><h3>Recent Bills</h3><button class="btn btn-sm btn-ghost" onclick="navigate('bills')">View All</button></div>
-          <table><thead><tr><th>Bill</th><th>Patient</th><th>Amount</th><th>Status</th></tr></thead>
-          <tbody id="recentBillsTable"><tr class="loading-row"><td colspan="4"><span class="spinner"></span>Loading…</td></tr></tbody></table>
+          <div class="table-scroll"><table><thead><tr><th>Bill</th><th>Patient</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody id="recentBillsTable"><tr class="loading-row"><td colspan="4"><span class="spinner"></span>Loading…</td></tr></tbody></table></div>
         </div>
         <!-- Expiring soon (30 days) -->
         <div class="card">
@@ -672,7 +681,7 @@
         <!-- Low stock -->
         <div class="card">
           <div class="card-header"><h3>Low Stock Alert</h3><button class="btn btn-sm btn-ghost" onclick="navigate('medicines')">Manage</button></div>
-          <div style="max-height:280px;overflow-y:auto">
+          <div class="table-scroll" style="max-height:280px;overflow-y:auto">
             <table><thead><tr><th>Medicine</th><th>Stock</th><th>Unit</th><th></th></tr></thead>
             <tbody id="lowStockTable"><tr class="loading-row"><td colspan="4"><span class="spinner"></span>Loading…</td></tr></tbody></table>
           </div>
@@ -725,10 +734,10 @@
         <button class="btn btn-primary" id="addMedBtn">+ Add Medicine</button>
       </div>
       <div class="card">
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Code</th><th>Name</th><th>Generic</th><th>Category</th><th>Unit</th><th>Price</th><th>Stock</th><th>Total Value</th><th>Expiry</th><th>Actions</th></tr></thead>
           <tbody id="medTableBody"><tr class="loading-row"><td colspan="10"><span class="spinner"></span>Loading…</td></tr></tbody>
-        </table>
+        </table></div>
       </div>
       <div class="pagination" id="medPagination"></div>
     </div>
@@ -741,10 +750,10 @@
         <button class="btn btn-ghost" id="clearBillFilterBtn">Clear</button>
       </div>
       <div class="card">
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Bill #</th><th>Patient</th><th>Date</th><th>Items</th><th>Total</th><th>Discount</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="billTableBody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span>Loading…</td></tr></tbody>
-        </table>
+        </table></div>
       </div>
       <div class="pagination" id="billPagination"></div>
     </div>
@@ -1960,7 +1969,7 @@ async function viewBill(id) {
       <div class="receipt-row"><span><strong>${h(b.id)}</strong></span><span>${h(b.date)}</span></div>
       <div class="receipt-row"><span>Patient: ${h(b.patientName)}</span><span>Code: ${h(b.patientCode)}</span></div>
       <hr/>
-      <table style="width:100%;font-size:.8rem">
+      <div class="table-scroll"><table style="width:100%;font-size:.8rem">
         <thead><tr><th style="text-align:left">Medicine</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
         <tbody>${b.items.map(i => `<tr>
           <td>${h(i.medicineName)}</td>
@@ -1968,7 +1977,7 @@ async function viewBill(id) {
           <td style="text-align:right">PKR ${h(fmt(i.rate))}</td>
           <td style="text-align:right">PKR ${h(fmt(i.amount))}</td>
         </tr>`).join('')}</tbody>
-      </table>
+      </table></div>
       <hr/>
       <div class="receipt-row"><span>Subtotal</span><span>PKR ${h(fmt(sub))}</span></div>
       ${b.discount > 0 ? `<div class="receipt-row"><span>Discount</span><span>PKR ${h(fmt(b.discount))}</span></div>` : ''}
@@ -2393,7 +2402,7 @@ document.getElementById('endOfDayBtn').addEventListener('click', () => {
 
   document.getElementById('eodBody').innerHTML = `
     <div style="font-size:.78rem;color:var(--gray-400);margin-bottom:16px">${h(todayStr)}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px;margin-bottom:16px">
       <div style="background:var(--primary-subtle);border-radius:10px;padding:12px;text-align:center">
         <div style="font-size:1.2rem;font-weight:800;color:var(--primary)">PKR ${Math.round(d?.periodSales || 0).toLocaleString()}</div>
         <div style="font-size:.68rem;color:var(--tx-3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Today's Revenue</div>
@@ -2409,8 +2418,8 @@ document.getElementById('endOfDayBtn').addEventListener('click', () => {
     </div>
     ${target > 0 ? `<div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--gray-500);margin-bottom:5px"><span>Daily Target Progress</span><span style="font-weight:700;color:var(--primary)">${pct}%</span></div><div style="background:var(--bg);border-radius:20px;height:8px;overflow:hidden"><div style="height:100%;border-radius:20px;background:linear-gradient(90deg,var(--primary),var(--success));width:${pct}%"></div></div></div>` : ''}
     ${topMeds.length ? `<div style="font-size:.72rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Top Medicines Today</div>
-    <table style="width:100%;font-size:.82rem"><thead><tr><th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Medicine</th><th style="padding:6px 8px;text-align:right">Qty</th></tr></thead>
-    <tbody>${topMeds.map((m, i) => `<tr><td style="padding:5px 8px;color:var(--gray-400)">${i+1}</td><td style="padding:5px 8px">${h(m.medicineName)}</td><td style="padding:5px 8px;text-align:right;font-weight:700">${h(String(m.totalQty))}</td></tr>`).join('')}</tbody></table>` : ''}
+    <div class="table-scroll"><table style="width:100%;font-size:.82rem"><thead><tr><th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Medicine</th><th style="padding:6px 8px;text-align:right">Qty</th></tr></thead>
+    <tbody>${topMeds.map((m, i) => `<tr><td style="padding:5px 8px;color:var(--gray-400)">${i+1}</td><td style="padding:5px 8px">${h(m.medicineName)}</td><td style="padding:5px 8px;text-align:right;font-weight:700">${h(String(m.totalQty))}</td></tr>`).join('')}</tbody></table></div>` : ''}
     <div style="display:flex;gap:10px;margin-top:16px">
       <div style="flex:1;background:var(--success-light);border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:var(--success)">${d?.savedCount || 0}</div><div style="font-size:.68rem;color:var(--success);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Saved</div></div>
       <div style="flex:1;background:var(--danger-light);border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:var(--danger)">${d?.cancelledCount || 0}</div><div style="font-size:.68rem;color:var(--danger);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Cancelled</div></div>
