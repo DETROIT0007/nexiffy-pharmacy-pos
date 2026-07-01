@@ -2762,19 +2762,25 @@ async function loadUsers() {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--gray-400)">No users yet</td></tr>';
       return;
     }
-    tbody.innerHTML = users.map(u => `
+    const myUsername = document.getElementById('userBadge').textContent;
+    tbody.innerHTML = users.map(u => {
+      const isSelf = u.username === myUsername;
+      return `
       <tr>
-        <td style="font-weight:700">${h(u.username)}${u.mustChangePassword ? ' <span class="badge badge-low" title="Must change password on next login">pending</span>' : ''}</td>
+        <td style="font-weight:700">${h(u.username)}${isSelf ? ' <span style="color:var(--tx-4);font-weight:400">(you)</span>' : ''}${u.mustChangePassword ? ' <span class="badge badge-low" title="Must change password on next login">pending</span>' : ''}</td>
         <td>${h(u.role)}</td>
         <td><span class="badge badge-${u.isActive ? 'saved' : 'cancelled'}">${u.isActive ? 'Active' : 'Disabled'}</span></td>
         <td style="color:var(--gray-400)">${h(new Date(u.createdAt).toLocaleDateString())}</td>
         <td>
           <button class="btn btn-sm btn-ghost" data-reset="${u.id}">Reset Password</button>
-          ${u.isActive
-            ? `<button class="btn btn-sm btn-danger" data-deactivate="${u.id}">Deactivate</button>`
-            : `<button class="btn btn-sm btn-success" data-reactivate="${u.id}">Reactivate</button>`}
+          ${isSelf
+            ? ''
+            : (u.isActive
+                ? `<button class="btn btn-sm btn-danger" data-deactivate="${u.id}">Deactivate</button>`
+                : `<button class="btn btn-sm btn-success" data-reactivate="${u.id}">Reactivate</button>`)}
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
   } catch { showToast('Network error loading users', true); }
 }
 
