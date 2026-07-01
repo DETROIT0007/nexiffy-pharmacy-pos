@@ -14,6 +14,7 @@ namespace Nexiffy.Data
         public DbSet<AppSetting> AppSettings { get; set; }
         public DbSet<RevokedToken> RevokedTokens { get; set; }
         public DbSet<MedicinePackUnit> MedicinePackUnits { get; set; }
+        public DbSet<AppUser> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,6 +48,10 @@ namespace Nexiffy.Data
                 .WithMany(m => m.PackUnits)
                 .HasForeignKey(p => p.MedicineCode)
                 .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<AppUser>()
+                .HasIndex(u => u.Username)
+                .IsUnique()
+                .HasDatabaseName("IX_Users_Username");
 
             modelBuilder.Entity<Medicine>().HasData(
                 new Medicine { Code = "MED-001", Name = "Panadol 500mg",     GenericName = "Paracetamol",              Category = "Painkiller",     Unit = "Strip",  Price = 85.00m,  Stock = 500,  ExpiryDate = "2027-06-30", Manufacturer = "GSK"       },

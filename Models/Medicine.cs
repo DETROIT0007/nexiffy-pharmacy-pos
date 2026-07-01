@@ -158,6 +158,44 @@ namespace Nexiffy.Models
     public record LoginRequest(string Username, string Password);
     public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
+    public static class UserRole
+    {
+        public const string Admin    = "Admin";
+        public const string Salesman = "Salesman";
+    }
+
+    public class AppUser
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(100)]
+        public string Username { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(500)]
+        public string PasswordHash { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(20)]
+        public string Role { get; set; } = UserRole.Salesman;
+
+        // Set when an admin creates the account or resets its password —
+        // forces a password change before the account can be used normally.
+        public bool MustChangePassword { get; set; } = false;
+
+        public bool IsActive { get; set; } = true;
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [MaxLength(100)]
+        public string? CreatedBy { get; set; }
+    }
+
+    public record CreateUserRequest(string Username, string TemporaryPassword, string Role);
+    public record ResetPasswordRequest(string NewTemporaryPassword);
+
     public class Category
     {
         [Key]

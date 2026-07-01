@@ -171,7 +171,11 @@ namespace Nexiffy.Controllers
             }
         }
 
+        // Cancelling reverses a sale and restores stock — kept as an admin-only
+        // action so the owner has oversight on every reversal, rather than a
+        // salesman being able to quietly cancel and redo a bill unsupervised.
         [HttpPut("{id}/cancel")]
+        [Authorize(Roles = UserRole.Admin)]
         public async Task<IActionResult> Cancel(string id, [FromBody] CancelRequest? req)
         {
             if (string.IsNullOrWhiteSpace(req?.Reason))

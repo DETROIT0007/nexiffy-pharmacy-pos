@@ -614,6 +614,7 @@
       <a href="#" data-page="pos"><span class="icon"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M1 1h3l2.5 10h9l2-7H5.5"/><circle cx="9" cy="17" r="1.5"/><circle cx="14" cy="17" r="1.5"/></svg></span> Point of Sale</a>
       <a href="#" data-page="medicines"><span class="icon"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 22 22" fill="currentColor"><rect x="7" y="0" width="8" height="22" rx="3"/><rect x="0" y="7" width="22" height="8" rx="3"/></svg></span> Medicines</a>
       <a href="#" data-page="bills"><span class="icon"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 20 22" fill="currentColor"><rect x="0" y="0" width="20" height="22" rx="3"/><rect x="3" y="5" width="14" height="2" rx="1" fill="white" opacity=".7"/><rect x="3" y="10" width="14" height="2" rx="1" fill="white" opacity=".7"/><rect x="3" y="15" width="8" height="2" rx="1" fill="white" opacity=".7"/></svg></span> Bills</a>
+      <a href="#" data-page="users" data-admin-only style="display:none"><span class="icon"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Users</a>
     </nav>
     <div class="sidebar-footer">Logged in as <strong id="sidebarUser">—</strong></div>
   </div>
@@ -774,11 +775,24 @@
       </div>
       <div class="card">
         <div class="table-scroll"><table>
-          <thead><tr><th>Bill #</th><th>Patient</th><th>Date</th><th>Items</th><th>Total</th><th>Discount</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="billTableBody"><tr class="loading-row"><td colspan="8"><span class="spinner"></span>Loading…</td></tr></tbody>
+          <thead><tr><th>Bill #</th><th>Patient</th><th>Date</th><th>Sold By</th><th>Items</th><th>Total</th><th>Discount</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="billTableBody"><tr class="loading-row"><td colspan="9"><span class="spinner"></span>Loading…</td></tr></tbody>
         </table></div>
       </div>
       <div class="pagination" id="billPagination"></div>
+    </div>
+
+    <!-- USERS (Admin only — enforced server-side too) -->
+    <div class="content page" id="page-users">
+      <div class="form-row">
+        <button class="btn btn-primary" id="addUserBtn">+ Add User</button>
+      </div>
+      <div class="card">
+        <div class="table-scroll"><table>
+          <thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody id="userTableBody"><tr class="loading-row"><td colspan="5"><span class="spinner"></span>Loading…</td></tr></tbody>
+        </table></div>
+      </div>
     </div>
   </div>
 </div>
@@ -900,6 +914,9 @@
 <div class="modal-overlay" id="passModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="passModalTitle">
     <h3 id="passModalTitle">Change Password</h3>
+    <div id="forcedPassNotice" style="display:none;padding:0 22px;margin-top:-6px;margin-bottom:10px;font-size:.8rem;color:var(--warning)">
+      This account was just created (or its password was reset) — set a new password to continue.
+    </div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
       <div class="form-col"><label>Current Password</label><input type="password" id="cpCurrent" autocomplete="current-password"/></div>
       <div class="form-col"><label>New Password <span style="font-weight:400;color:var(--gray-400)">(min 8 chars)</span></label><input type="password" id="cpNew" autocomplete="new-password"/></div>
@@ -909,6 +926,40 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" id="closePassModalBtn">Cancel</button>
       <button class="btn btn-primary" id="savePassBtn">Change Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Modal (Admin only) -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+    <h3 id="userModalTitle">Add User</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <div class="form-col"><label>Username</label><input type="text" id="uNewUsername" maxlength="100" autocomplete="off"/></div>
+      <div class="form-col"><label>Temporary Password <span style="font-weight:400;color:var(--gray-400)">(min 8 chars — they'll be asked to change it on first login)</span></label><input type="text" id="uNewPassword" maxlength="200" autocomplete="off"/></div>
+      <div class="form-col"><label>Role</label>
+        <select id="uNewRole"><option value="Salesman">Salesman</option><option value="Admin">Admin</option></select>
+      </div>
+    </div>
+    <div id="userModalErr" style="color:var(--danger);font-size:.82rem;margin-top:8px;min-height:18px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="closeUserModalBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveUserBtn">Add User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset User Password Modal (Admin only) -->
+<div class="modal-overlay" id="resetPassModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="resetPassModalTitle">
+    <h3 id="resetPassModalTitle">Reset Password</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <div class="form-col"><label>New Temporary Password <span style="font-weight:400;color:var(--gray-400)">(min 8 chars)</span></label><input type="text" id="uResetPassword" maxlength="200" autocomplete="off"/></div>
+    </div>
+    <div id="resetPassModalErr" style="color:var(--danger);font-size:.82rem;margin-top:8px;min-height:18px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="closeResetPassModalBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveResetPassBtn">Reset Password</button>
     </div>
   </div>
 </div>
@@ -960,6 +1011,18 @@ let allMedicines = [];
 let cart = [];
 let editingMedCode = null;
 let currentBill = null;
+let currentUserRole = null;
+let _forcedPasswordChange = false;
+
+// Admin-only UI: Users nav link, and the Cancel Bill action (cancelling
+// reverses stock/sales and is kept under owner oversight — see BillsController).
+function applyRoleUI(role) {
+  currentUserRole = role;
+  const isAdmin = role === 'Admin';
+  document.querySelectorAll('[data-admin-only]').forEach(el => {
+    el.style.display = isAdmin ? '' : 'none';
+  });
+}
 let medPage = 1, medTotal = 0;
 let billPage = 1, billTotal = 0;
 const PAGE_SIZE = 20;
@@ -1049,8 +1112,10 @@ async function login() {
       document.getElementById('userBadge').textContent = data.username;
       document.getElementById('userInitial').textContent = (data.username || 'A')[0].toUpperCase();
       document.getElementById('sidebarUser').textContent = data.username;
+      applyRoleUI(data.role);
       hideLogin();
       initApp();
+      if (data.mustChangePassword) openForcedPasswordChange();
     } else {
       err.textContent = data.message || 'Invalid credentials';
     }
@@ -1093,12 +1158,13 @@ function navigate(page, el) {
   document.getElementById('page-' + page).classList.add('active');
   const link = el instanceof Element ? el : document.querySelector(`#mainNav a[data-page="${page}"]`);
   if (link) link.classList.add('active');
-  const titles = { dashboard:'Dashboard', pos:'Point of Sale', medicines:'Medicine Catalog', bills:'Bills & History' };
+  const titles = { dashboard:'Dashboard', pos:'Point of Sale', medicines:'Medicine Catalog', bills:'Bills & History', users:'Users' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   if (page === 'dashboard') loadDashboard();
   if (page === 'pos') { loadPosMedicines(); focusPosSearch(); }
   if (page === 'medicines') { medPage = 1; loadMedicines(); loadCategories(); }
   if (page === 'bills') { billPage = 1; loadBills(); }
+  if (page === 'users') loadUsers();
 }
 
 function toggleSidebar() {
@@ -2326,19 +2392,20 @@ async function loadBills() {
   if (patient) url += `&patient=${encodeURIComponent(patient)}`;
   if (date) url += `&date=${date}`;
   const tbody = document.getElementById('billTableBody');
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="8"><span class="spinner"></span>Loading…</td></tr>';
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="9"><span class="spinner"></span>Loading…</td></tr>';
   try {
     const res = await apiFetch(url);
     const { items: bills, total } = await res.json();
     billTotal = total;
     if (!bills.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--gray-400)">No bills found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:18px;color:var(--gray-400)">No bills found</td></tr>';
     } else {
       tbody.innerHTML = bills.map(b => `
         <tr>
           <td style="font-weight:700;color:var(--primary);cursor:pointer" data-view="${h(b.id)}">${h(b.id)}</td>
           <td>${h(b.patientName)} <span style="color:var(--gray-400);font-size:.72rem">${h(b.patientCode)}</span></td>
           <td>${h(b.date)}</td>
+          <td style="color:var(--gray-400)">${h(b.createdBy || '—')}</td>
           <td style="color:var(--gray-400)">${(b.items||[]).length} item${(b.items||[]).length !== 1 ? 's' : ''}</td>
           <td><strong>PKR ${h(fmt(b.totalAmount))}</strong></td>
           <td>${b.discount > 0 ? `PKR ${h(fmt(b.discount))}` : '—'}</td>
@@ -2354,7 +2421,7 @@ async function loadBills() {
     if (e.message !== 'Session expired. Please login again.') {
       showToast('Cannot load bills', true);
       document.getElementById('billTableBody').innerHTML =
-        '<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--danger)">Error loading bills — check server</td></tr>';
+        '<tr><td colspan="9" style="text-align:center;padding:18px;color:var(--danger)">Error loading bills — check server</td></tr>';
     }
   }
 }
@@ -2408,7 +2475,7 @@ async function viewBill(id) {
     `;
     const cancelBtn = document.getElementById('cancelBillBtn');
     const todayStr = new Date().toISOString().slice(0, 10);
-    cancelBtn.style.display = (b.status === 'Cancelled' || b.date !== todayStr) ? 'none' : '';
+    cancelBtn.style.display = (currentUserRole !== 'Admin' || b.status === 'Cancelled' || b.date !== todayStr) ? 'none' : '';
     document.getElementById('billModal').classList.add('open');
   } catch { showToast('Could not load bill', true); }
 }
@@ -2589,7 +2656,22 @@ document.getElementById('changePassBtn').addEventListener('click', () => {
   document.getElementById('passModal').classList.add('open');
   setTimeout(() => document.getElementById('cpCurrent').focus(), 50);
 });
+
+// First login after account creation / an admin password reset — the temp
+// password IS the "current password" here, so this reuses the normal
+// change-password form and endpoint, just non-dismissable until it succeeds.
+function openForcedPasswordChange() {
+  _forcedPasswordChange = true;
+  ['cpCurrent','cpNew','cpConfirm'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('passModalErr').textContent = '';
+  document.getElementById('forcedPassNotice').style.display = '';
+  document.getElementById('closePassModalBtn').style.display = 'none';
+  document.getElementById('passModal').classList.add('open');
+  setTimeout(() => document.getElementById('cpCurrent').focus(), 50);
+}
+
 document.getElementById('closePassModalBtn').addEventListener('click', () => {
+  if (_forcedPasswordChange) return;
   document.getElementById('passModal').classList.remove('open');
 });
 document.getElementById('savePassBtn').addEventListener('click', async () => {
@@ -2612,11 +2694,140 @@ document.getElementById('savePassBtn').addEventListener('click', async () => {
     if (res.ok) {
       showToast('Password changed successfully', false, true);
       document.getElementById('passModal').classList.remove('open');
+      if (_forcedPasswordChange) {
+        _forcedPasswordChange = false;
+        document.getElementById('forcedPassNotice').style.display = 'none';
+        document.getElementById('closePassModalBtn').style.display = '';
+      }
     } else {
       errEl.textContent = d.message || 'Failed to change password';
     }
   } catch { errEl.textContent = 'Network error'; }
   finally { btn.disabled = false; btn.textContent = 'Change Password'; }
+});
+
+// ── Users Page (Admin only — backend also enforces this on every endpoint) ──
+async function loadUsers() {
+  const tbody = document.getElementById('userTableBody');
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="5"><span class="spinner"></span>Loading…</td></tr>';
+  try {
+    const res = await apiFetch('/Users');
+    if (!res.ok) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--danger)">Could not load users</td></tr>';
+      return;
+    }
+    const users = await res.json();
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--gray-400)">No users yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td style="font-weight:700">${h(u.username)}${u.mustChangePassword ? ' <span class="badge badge-low" title="Must change password on next login">pending</span>' : ''}</td>
+        <td>${h(u.role)}</td>
+        <td><span class="badge badge-${u.isActive ? 'saved' : 'cancelled'}">${u.isActive ? 'Active' : 'Disabled'}</span></td>
+        <td style="color:var(--gray-400)">${h(new Date(u.createdAt).toLocaleDateString())}</td>
+        <td>
+          <button class="btn btn-sm btn-ghost" data-reset="${u.id}">Reset Password</button>
+          ${u.isActive
+            ? `<button class="btn btn-sm btn-danger" data-deactivate="${u.id}">Deactivate</button>`
+            : `<button class="btn btn-sm btn-success" data-reactivate="${u.id}">Reactivate</button>`}
+        </td>
+      </tr>`).join('');
+  } catch { showToast('Network error loading users', true); }
+}
+
+document.getElementById('userTableBody').addEventListener('click', async e => {
+  const resetBtn = e.target.closest('[data-reset]');
+  const deactivateBtn = e.target.closest('[data-deactivate]');
+  const reactivateBtn = e.target.closest('[data-reactivate]');
+
+  if (resetBtn) {
+    document.getElementById('uResetPassword').value = '';
+    document.getElementById('resetPassModalErr').textContent = '';
+    document.getElementById('resetPassModal').dataset.userId = resetBtn.dataset.reset;
+    document.getElementById('resetPassModal').classList.add('open');
+  } else if (deactivateBtn) {
+    if (!confirm('Deactivate this user? They will no longer be able to log in.')) return;
+    try {
+      const res = await apiFetch(`/Users/${deactivateBtn.dataset.deactivate}/deactivate`, { method: 'PUT' });
+      if (res.ok) { showToast('User deactivated', false, true); loadUsers(); }
+      else { const d = await res.json(); showToast(d.message || 'Could not deactivate user', true); }
+    } catch { showToast('Network error', true); }
+  } else if (reactivateBtn) {
+    try {
+      const res = await apiFetch(`/Users/${reactivateBtn.dataset.reactivate}/reactivate`, { method: 'PUT' });
+      if (res.ok) { showToast('User reactivated', false, true); loadUsers(); }
+      else { showToast('Could not reactivate user', true); }
+    } catch { showToast('Network error', true); }
+  }
+});
+
+document.getElementById('addUserBtn').addEventListener('click', () => {
+  document.getElementById('uNewUsername').value = '';
+  document.getElementById('uNewPassword').value = '';
+  document.getElementById('uNewRole').value = 'Salesman';
+  document.getElementById('userModalErr').textContent = '';
+  document.getElementById('userModal').classList.add('open');
+});
+document.getElementById('closeUserModalBtn').addEventListener('click', () => {
+  document.getElementById('userModal').classList.remove('open');
+});
+document.getElementById('saveUserBtn').addEventListener('click', async () => {
+  const username = document.getElementById('uNewUsername').value.trim();
+  const password = document.getElementById('uNewPassword').value;
+  const role = document.getElementById('uNewRole').value;
+  const errEl = document.getElementById('userModalErr');
+  errEl.textContent = '';
+  if (username.length < 3) { errEl.textContent = 'Username must be at least 3 characters'; return; }
+  if (password.length < 8) { errEl.textContent = 'Temporary password must be at least 8 characters'; return; }
+
+  const btn = document.getElementById('saveUserBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    const res = await apiFetch('/Users', {
+      method: 'POST',
+      body: JSON.stringify({ username, temporaryPassword: password, role })
+    });
+    const d = await res.json();
+    if (res.ok) {
+      showToast(`User '${username}' added`, false, true);
+      document.getElementById('userModal').classList.remove('open');
+      loadUsers();
+    } else {
+      errEl.textContent = d.message || 'Could not add user';
+    }
+  } catch { errEl.textContent = 'Network error'; }
+  finally { btn.disabled = false; btn.textContent = 'Add User'; }
+});
+
+document.getElementById('closeResetPassModalBtn').addEventListener('click', () => {
+  document.getElementById('resetPassModal').classList.remove('open');
+});
+document.getElementById('saveResetPassBtn').addEventListener('click', async () => {
+  const userId = document.getElementById('resetPassModal').dataset.userId;
+  const newPass = document.getElementById('uResetPassword').value;
+  const errEl = document.getElementById('resetPassModalErr');
+  errEl.textContent = '';
+  if (newPass.length < 8) { errEl.textContent = 'Temporary password must be at least 8 characters'; return; }
+
+  const btn = document.getElementById('saveResetPassBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await apiFetch(`/Users/${userId}/reset-password`, {
+      method: 'PUT',
+      body: JSON.stringify({ newTemporaryPassword: newPass })
+    });
+    const d = await res.json();
+    if (res.ok) {
+      showToast('Password reset', false, true);
+      document.getElementById('resetPassModal').classList.remove('open');
+      loadUsers();
+    } else {
+      errEl.textContent = d.message || 'Could not reset password';
+    }
+  } catch { errEl.textContent = 'Network error'; }
+  finally { btn.disabled = false; btn.textContent = 'Reset Password'; }
 });
 
 // ── Pagination ─────────────────────────────────────
@@ -2763,7 +2974,8 @@ const _escMap = {
   medModal: 'closeMedModalBtn', billModal: 'closeBillModalBtn',
   catMgmtModal: 'closeCatMgmtBtn', passModal: 'closePassModalBtn',
   restockModal: 'closeRestockBtn', cancelBillModal: 'closeCancelModalBtn',
-  eodModal: 'closeEodBtn',
+  eodModal: 'closeEodBtn', userModal: 'closeUserModalBtn',
+  resetPassModal: 'closeResetPassModalBtn',
 };
 document.addEventListener('keydown', e => {
   const tag = document.activeElement.tagName;
@@ -2936,8 +3148,10 @@ document.getElementById('loginUser').addEventListener('keydown', e => {
       document.getElementById('userBadge').textContent = data.username;
       document.getElementById('userInitial').textContent = (data.username || 'A')[0].toUpperCase();
       document.getElementById('sidebarUser').textContent = data.username;
+      applyRoleUI(data.role);
       hideLogin();
       initApp();
+      if (data.mustChangePassword) openForcedPasswordChange();
       // Offline session (SW served cached response, server unreachable)
       if (!navigator.onLine)
         showToast('Running offline — bills will sync when server is back');

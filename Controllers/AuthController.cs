@@ -17,28 +17,23 @@ namespace Nexiffy.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly IConfiguration _config;
         private readonly IPasswordHasher<string> _hasher;
         private readonly ILogger<AuthController> _logger;
         private readonly IWebHostEnvironment _env;
         private readonly AppDbContext _context;
         private readonly string _jwtSecret;
 
-        // Lock the account for 15 minutes after 10 consecutive failures
+        // Lock an individual account for 15 minutes after 10 consecutive failures
         private const int MaxFailedAttempts = 10;
         private const int LockoutMinutes    = 15;
-        private const string FailKey  = "Auth:FailedAttempts";
-        private const string LockKey  = "Auth:LockedUntil";
 
         public AuthController(
-            IConfiguration config,
             IPasswordHasher<string> hasher,
             ILogger<AuthController> logger,
             IWebHostEnvironment env,
             AppDbContext context,
             [FromKeyedServices("JwtSecret")] string jwtSecret)
         {
-            _config     = config;
             _hasher     = hasher;
             _logger     = logger;
             _env        = env;
@@ -47,18 +42,16 @@ namespace Nexiffy.Controllers
         }
 
         // ── Helpers ──────────────────────────────────────────────
+        // Lockout state is keyed per attempted username, not globally — one
+        // account being brute-forced (or a salesman fat-fingering a password)
+        // must never lock out every other account.
 
-        private async Task<string?> GetStoredHashAsync()
-        {
-            var dbHash = (await _context.AppSettings.FindAsync("Auth:PasswordHash"))?.Value;
-            if (!string.IsNullOrWhiteSpace(dbHash)) return dbHash;
-            var cfgHash = _config["Auth:PasswordHash"];
-            return !string.IsNullOrWhiteSpace(cfgHash) ? cfgHash : null;
-        }
+        private static string FailKey(string username) => $"Auth:FailedAttempts:{username}";
+        private static string LockKey(string username) => $"Auth:LockedUntil:{username}";
 
-        private async Task<(bool locked, DateTime until)> CheckLockoutAsync()
+        private async Task<(bool locked, DateTime until)> CheckLockoutAsync(string username)
         {
-            var setting = await _context.AppSettings.FindAsync(LockKey);
+            var setting = await _context.AppSettings.FindAsync(LockKey(username));
             if (setting == null) return (false, default);
             if (DateTime.TryParse(setting.Value, null,
                 System.Globalization.DateTimeStyles.RoundtripKind, out var until)
@@ -67,35 +60,37 @@ namespace Nexiffy.Controllers
             return (false, default);
         }
 
-        private async Task RecordFailedAttemptAsync()
+        private async Task RecordFailedAttemptAsync(string username)
         {
-            var fail = await _context.AppSettings.FindAsync(FailKey);
+            var failKey = FailKey(username);
+            var fail = await _context.AppSettings.FindAsync(failKey);
             var count = fail != null && int.TryParse(fail.Value, out var c) ? c + 1 : 1;
 
             if (fail == null)
-                _context.AppSettings.Add(new AppSetting { Key = FailKey, Value = count.ToString(), UpdatedAt = DateTime.UtcNow });
+                _context.AppSettings.Add(new AppSetting { Key = failKey, Value = count.ToString(), UpdatedAt = DateTime.UtcNow });
             else
             { fail.Value = count.ToString(); fail.UpdatedAt = DateTime.UtcNow; }
 
             if (count >= MaxFailedAttempts)
             {
                 var until = DateTime.UtcNow.AddMinutes(LockoutMinutes);
-                var lockSetting = await _context.AppSettings.FindAsync(LockKey);
+                var lockKey = LockKey(username);
+                var lockSetting = await _context.AppSettings.FindAsync(lockKey);
                 if (lockSetting == null)
-                    _context.AppSettings.Add(new AppSetting { Key = LockKey, Value = until.ToString("O"), UpdatedAt = DateTime.UtcNow });
+                    _context.AppSettings.Add(new AppSetting { Key = lockKey, Value = until.ToString("O"), UpdatedAt = DateTime.UtcNow });
                 else
                 { lockSetting.Value = until.ToString("O"); lockSetting.UpdatedAt = DateTime.UtcNow; }
 
-                _logger.LogWarning("Account locked until {Until} after {Count} failed attempts from {IP}",
-                    until, count, HttpContext.Connection.RemoteIpAddress);
+                _logger.LogWarning("Account '{User}' locked until {Until} after {Count} failed attempts from {IP}",
+                    username, until, count, HttpContext.Connection.RemoteIpAddress);
             }
             await _context.SaveChangesAsync();
         }
 
-        private async Task ResetLockoutAsync()
+        private async Task ResetLockoutAsync(string username)
         {
-            var fail = await _context.AppSettings.FindAsync(FailKey);
-            var lockSetting = await _context.AppSettings.FindAsync(LockKey);
+            var fail = await _context.AppSettings.FindAsync(FailKey(username));
+            var lockSetting = await _context.AppSettings.FindAsync(LockKey(username));
             if (fail != null) _context.AppSettings.Remove(fail);
             if (lockSetting != null) _context.AppSettings.Remove(lockSetting);
             if (fail != null || lockSetting != null)
@@ -112,45 +107,36 @@ namespace Nexiffy.Controllers
             if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
                 return BadRequest(new { message = "Username and password required" });
 
-            // Account lockout check
-            var (locked, until) = await CheckLockoutAsync();
+            var (locked, until) = await CheckLockoutAsync(request.Username);
             if (locked)
             {
                 var remaining = (int)Math.Ceiling((until - DateTime.UtcNow).TotalMinutes);
-                _logger.LogWarning("Login blocked — account locked for {Min} more minute(s) (IP {IP})",
-                    remaining, HttpContext.Connection.RemoteIpAddress);
+                _logger.LogWarning("Login blocked — '{User}' locked for {Min} more minute(s) (IP {IP})",
+                    request.Username, remaining, HttpContext.Connection.RemoteIpAddress);
                 return StatusCode(429, new { message = $"Account locked. Try again in {remaining} minute(s)." });
             }
 
-            var validUser = _config["Auth:Username"];
-            if (request.Username != validUser)
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username && u.IsActive);
+            if (user == null)
             {
-                await RecordFailedAttemptAsync();
-                _logger.LogWarning("Failed login for unknown user '{User}' from {IP}",
+                await RecordFailedAttemptAsync(request.Username);
+                _logger.LogWarning("Failed login for unknown/inactive user '{User}' from {IP}",
                     request.Username, HttpContext.Connection.RemoteIpAddress);
                 return Unauthorized(new { message = "Invalid credentials" });
             }
 
-            var storedHash = await GetStoredHashAsync();
-            if (storedHash == null)
-            {
-                _logger.LogWarning("Login attempt with no password hash configured (IP: {IP})", HttpContext.Connection.RemoteIpAddress);
-                return Unauthorized(new { message = "Invalid credentials" });
-            }
-
-            var verifyResult = _hasher.VerifyHashedPassword("", storedHash, request.Password);
+            var verifyResult = _hasher.VerifyHashedPassword("", user.PasswordHash, request.Password);
             bool passwordValid = verifyResult != PasswordVerificationResult.Failed;
 
             if (!passwordValid)
             {
-                await RecordFailedAttemptAsync();
+                await RecordFailedAttemptAsync(request.Username);
                 _logger.LogWarning("Failed login for user '{User}' from {IP}",
                     request.Username, HttpContext.Connection.RemoteIpAddress);
                 return Unauthorized(new { message = "Invalid credentials" });
             }
 
-            // Successful login — reset lockout counter
-            await ResetLockoutAsync();
+            await ResetLockoutAsync(request.Username);
 
             // Issue JWT with a unique JTI so individual tokens can be revoked at logout
             var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
@@ -160,7 +146,8 @@ namespace Nexiffy.Controllers
                 audience: "nexiffy-pos",
                 claims: new[]
                 {
-                    new Claim(ClaimTypes.Name, request.Username),
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Role, user.Role),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
                 },
                 expires: DateTime.UtcNow.AddHours(2),
@@ -176,10 +163,10 @@ namespace Nexiffy.Controllers
                     Path      = "/"
                 });
 
-            _logger.LogInformation("User '{User}' logged in from {IP}",
-                request.Username, HttpContext.Connection.RemoteIpAddress);
+            _logger.LogInformation("User '{User}' ({Role}) logged in from {IP}",
+                user.Username, user.Role, HttpContext.Connection.RemoteIpAddress);
 
-            return Ok(new { username = request.Username });
+            return Ok(new { username = user.Username, role = user.Role, mustChangePassword = user.MustChangePassword });
         }
 
         [HttpPost("logout")]
@@ -213,7 +200,21 @@ namespace Nexiffy.Controllers
 
         [HttpGet("me")]
         [Authorize]
-        public IActionResult Me() => Ok(new { username = User.Identity?.Name });
+        public async Task<IActionResult> Me()
+        {
+            var username = User.Identity?.Name;
+            var mustChangePassword = await _context.Users
+                .Where(u => u.Username == username)
+                .Select(u => (bool?)u.MustChangePassword)
+                .FirstOrDefaultAsync() ?? false;
+
+            return Ok(new
+            {
+                username,
+                role = User.FindFirst(ClaimTypes.Role)?.Value,
+                mustChangePassword
+            });
+        }
 
         [HttpPost("change-password")]
         [Authorize]
@@ -225,26 +226,20 @@ namespace Nexiffy.Controllers
             if (req.NewPassword.Length < 8)
                 return BadRequest(new { message = "New password must be at least 8 characters" });
 
-            var storedHash = await GetStoredHashAsync();
+            var username = User.Identity?.Name;
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+                return Unauthorized();
 
-            if (storedHash == null)
-                return BadRequest(new { message = "No password hash configured. Set Auth:PasswordHash in appsettings.json first." });
-
-            var cpResult = _hasher.VerifyHashedPassword("", storedHash, req.CurrentPassword);
-            bool currentValid = cpResult != PasswordVerificationResult.Failed;
-
-            if (!currentValid)
+            var cpResult = _hasher.VerifyHashedPassword("", user.PasswordHash, req.CurrentPassword);
+            if (cpResult == PasswordVerificationResult.Failed)
                 return BadRequest(new { message = "Current password is incorrect" });
 
-            var newHash = _hasher.HashPassword("", req.NewPassword);
-            var setting = await _context.AppSettings.FindAsync("Auth:PasswordHash");
-            if (setting == null)
-                _context.AppSettings.Add(new AppSetting { Key = "Auth:PasswordHash", Value = newHash, UpdatedAt = DateTime.UtcNow });
-            else
-            { setting.Value = newHash; setting.UpdatedAt = DateTime.UtcNow; }
-
+            user.PasswordHash = _hasher.HashPassword("", req.NewPassword);
+            user.MustChangePassword = false;
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Password changed by {User}", User.Identity?.Name);
+
+            _logger.LogInformation("Password changed by {User}", username);
             return Ok(new { message = "Password changed successfully" });
         }
     }

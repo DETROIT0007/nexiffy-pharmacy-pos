@@ -215,6 +215,39 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine("[Nexiffy] Seeded 10 sample medicines.");
         }
 
+        // One-time bootstrap: migrate the legacy single-admin config/AppSettings
+        // credential into the new multi-user Users table, preserving whatever
+        // username/password already works today so this migration can't lock
+        // anyone out.
+        if (!await context.Users.AnyAsync())
+        {
+            var legacyUsername = app.Configuration["Auth:Username"] ?? "admin";
+            var legacyHash = (await context.AppSettings.FindAsync("Auth:PasswordHash"))?.Value;
+            if (string.IsNullOrWhiteSpace(legacyHash))
+                legacyHash = app.Configuration["Auth:PasswordHash"];
+
+            if (!string.IsNullOrWhiteSpace(legacyHash))
+            {
+                context.Users.Add(new Nexiffy.Models.AppUser
+                {
+                    Username = legacyUsername,
+                    PasswordHash = legacyHash,
+                    Role = Nexiffy.Models.UserRole.Admin,
+                    MustChangePassword = false,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "system-migration"
+                });
+                await context.SaveChangesAsync();
+                Console.WriteLine($"[Nexiffy] Migrated existing admin credential '{legacyUsername}' into the Users table.");
+            }
+            else
+            {
+                Console.WriteLine("[Nexiffy] WARNING: no existing admin credential to migrate and no Users exist. " +
+                    "Set Auth:PasswordHash (or Auth:Password) once to bootstrap the first admin account.");
+            }
+        }
+
         // Prune expired revoked tokens on startup
         var pruned = await context.RevokedTokens
             .Where(t => t.ExpiresAt < DateTime.UtcNow)
@@ -227,16 +260,6 @@ using (var scope = app.Services.CreateScope())
     {
         Console.WriteLine($"DB error: {ex.Message}");
     }
-}
-
-// One-time startup warning if password is still stored as plaintext
-if (string.IsNullOrWhiteSpace(app.Configuration["Auth:PasswordHash"]) &&
-    !string.IsNullOrWhiteSpace(app.Configuration["Auth:Password"]))
-{
-    var hasher = app.Services.GetRequiredService<IPasswordHasher<string>>();
-    var hash = hasher.HashPassword("", app.Configuration["Auth:Password"]!);
-    Console.WriteLine("⚠  SECURITY: plaintext password detected in configuration.");
-    Console.WriteLine($"   Set Auth:PasswordHash = \"{hash}\" in appsettings.json and remove Auth:Password.");
 }
 
 // Render/Railway/Heroku-style hosts inject the listen port via the PORT
