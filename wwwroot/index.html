@@ -1916,9 +1916,11 @@ document.getElementById('printCartBtn').addEventListener('click', async () => {
   const sub         = cart.reduce((s, i) => s + i.amount, 0);
   if (discount < 0)   { showToast('Discount cannot be negative', true); return; }
   if (discount > sub) { showToast('Discount cannot exceed subtotal', true); return; }
-  // Print immediately while still in the click gesture (same pattern as Bills Print)
+  // Print immediately while still in the click gesture (same pattern as Bills Print).
+  // The bill isn't saved yet, so id is a placeholder — createdBy is still accurate
+  // since it's always the currently logged-in user.
   printReceipt({
-    id: '---', date: new Date().toLocaleDateString('en-PK'),
+    id: '---', createdAt: new Date().toISOString(), createdBy: document.getElementById('userBadge').textContent,
     patientName, patientCode, discount,
     totalAmount: sub - discount,
     items: cart.map(i => ({ medicineName: i.name, unit: i.unit, qty: i.qty, rate: i.rate, amount: i.amount }))
@@ -2527,8 +2529,15 @@ document.getElementById('printBillBtn').addEventListener('click', () => {
 });
 
 function printReceipt(b) {
-  const sub = b.items.reduce((s, i) => s + i.amount, 0);
+  const items = b.items || [];
+  const sub = items.reduce((s, i) => s + i.amount, 0);
+  const totalQty = items.reduce((s, i) => s + Number(i.qty), 0);
   const e = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+  const dt = b.createdAt ? new Date(b.createdAt) : new Date();
+  const dateStr = dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).replace(/ /g, '-');
+  const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
+
   const html = `<!DOCTYPE html><html><head><title>Receipt ${e(b.id)}</title><style>
     body{font-family:monospace;font-size:11px;padding:10px;max-width:280px;margin:0}
     h2,h3{text-align:center;margin:4px 0}
@@ -2538,28 +2547,32 @@ function printReceipt(b) {
     td,th{padding:2px 4px;font-size:10px}
     th{border-bottom:1px solid #000}
     .total{font-weight:bold}
+    .bar{background:#000;color:#fff;text-align:center;padding:3px 0;font-weight:bold;letter-spacing:1px;margin:8px 0 4px}
+    .net{font-size:13px}
   </style></head><body>
     <h2>NEXFFY PHARMACY</h2>
     <h3>Sales Receipt</h3>
     <hr/>
-    <div class="row"><span>Bill:</span><span>${e(b.id)}</span></div>
-    <div class="row"><span>Date:</span><span>${e(b.date)}</span></div>
+    <div class="row"><span>Cashier</span><span>${e(b.createdBy || '—')}</span></div>
+    <div class="row"><span>Invoice No.</span><span>${e(b.id)}</span></div>
+    <div class="row"><span>${e(dateStr)}</span><span>${e(timeStr)}</span></div>
     <div class="row"><span>Patient:</span><span>${e(b.patientName)}</span></div>
     <div class="row"><span>Code:</span><span>${e(b.patientCode)}</span></div>
-    <hr/>
+    <div class="bar">SALE RECEIPT</div>
     <table>
-      <thead><tr><th style="text-align:left">Item</th><th>Qty</th><th>Rate</th><th>Amt</th></tr></thead>
-      <tbody>${b.items.map(i => `<tr>
+      <thead><tr><th style="text-align:left">Qty</th><th style="text-align:left">Item</th><th>Rate</th><th>Amt</th></tr></thead>
+      <tbody>${items.map(i => `<tr>
+        <td>${e(i.qty)} ${e(i.unit || '')}</td>
         <td>${e(i.medicineName)}</td>
-        <td style="text-align:center">${e(i.qty)} ${e(i.unit || '')}</td>
         <td style="text-align:right">${Number(i.rate).toFixed(2)}</td>
         <td style="text-align:right">${Number(i.amount).toFixed(2)}</td>
       </tr>`).join('')}</tbody>
     </table>
+    <div class="row" style="margin-top:4px"><span>Items: ${items.length}</span><span>Qty: ${totalQty}</span></div>
     <hr/>
     <div class="row"><span>Subtotal:</span><span>PKR ${sub.toFixed(2)}</span></div>
     ${b.discount > 0 ? `<div class="row"><span>Discount:</span><span>PKR ${Number(b.discount).toFixed(2)}</span></div>` : ''}
-    <div class="row total"><span>TOTAL:</span><span>PKR ${Number(b.totalAmount).toFixed(2)}</span></div>
+    <div class="row total net"><span>NET BILL:</span><span>PKR ${Number(b.totalAmount).toFixed(2)}</span></div>
     <hr/>
     <p style="text-align:center;font-size:9px">Thank you for your purchase<br/>Nexiffy Pharmacy POS</p>
   </body></html>`;

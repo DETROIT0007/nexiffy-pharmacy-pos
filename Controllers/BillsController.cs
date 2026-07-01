@@ -100,6 +100,7 @@ namespace Nexiffy.Controllers
 
                 bill.Id = $"BILL-{seq:D8}";
                 bill.Date = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                bill.CreatedAt = DateTime.UtcNow;
                 bill.Status = BillStatus.Saved;
                 bill.CreatedBy = User.Identity?.Name;
 
@@ -160,7 +161,15 @@ namespace Nexiffy.Controllers
                 _logger.LogInformation("Bill {BillId} created by {User} — {Items} items, total PKR {Total}",
                     bill.Id, User.Identity?.Name, bill.Items.Count, bill.TotalAmount);
 
-                return Ok(new { message = "Bill saved", id = bill.Id, totalAmount = bill.TotalAmount });
+                return Ok(new
+                {
+                    message = "Bill saved",
+                    id = bill.Id,
+                    totalAmount = bill.TotalAmount,
+                    date = bill.Date,
+                    createdAt = bill.CreatedAt,
+                    createdBy = bill.CreatedBy
+                });
             }
             catch (Exception ex)
             {

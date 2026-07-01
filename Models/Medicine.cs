@@ -114,6 +114,11 @@ namespace Nexiffy.Models
         [MaxLength(100)]
         public string? CreatedBy { get; set; }
 
+        // Exact sale timestamp, separate from the yyyy-MM-dd Date string above
+        // (which is only used for day-boundary filtering/queries) — needed so
+        // receipts can show the real time of sale, including on a reprint.
+        public DateTime? CreatedAt { get; set; }
+
         public DateTime? CancelledAt { get; set; }
 
         [MaxLength(100)]
