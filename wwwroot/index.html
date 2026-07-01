@@ -851,7 +851,7 @@
   <div class="modal" style="max-width:380px" role="dialog" aria-modal="true" aria-labelledby="cancelBillModalTitle">
     <h3 id="cancelBillModalTitle">Cancel Bill</h3>
     <div style="margin-bottom:14px">
-      <label for="cancelReasonInput" style="display:block;margin-bottom:6px;font-size:.83rem;font-weight:600;color:var(--tx-2)">Reason <span style="font-weight:400;color:var(--tx-4)">(optional)</span></label>
+      <label for="cancelReasonInput" style="display:block;margin-bottom:6px;font-size:.83rem;font-weight:600;color:var(--tx-2)">Reason <span style="font-weight:400;color:var(--tx-4)">(required)</span></label>
       <input type="text" id="cancelReasonInput" placeholder="e.g. Wrong items, patient refused…" maxlength="200"/>
     </div>
     <div class="modal-actions">
@@ -1973,10 +1973,12 @@ async function viewBill(id) {
       <div class="receipt-row"><span>Subtotal</span><span>PKR ${h(fmt(sub))}</span></div>
       ${b.discount > 0 ? `<div class="receipt-row"><span>Discount</span><span>PKR ${h(fmt(b.discount))}</span></div>` : ''}
       <div class="receipt-row"><strong>Total</strong><strong>PKR ${h(fmt(b.totalAmount))}</strong></div>
-      ${b.notes ? `<div style="margin-top:8px;color:var(--gray-400);font-size:.78rem">Note: ${h(b.notes)}</div>` : ''}
+      <div style="margin-top:8px;color:var(--gray-400);font-size:.78rem">Created by: ${h(b.createdBy || 'Unknown')}</div>
+      ${b.status === 'Cancelled' ? `<div style="margin-top:2px;color:var(--danger);font-size:.78rem">Cancelled by ${h(b.cancelledBy || 'Unknown')}${b.cancelledAt ? ` on ${h(new Date(b.cancelledAt).toLocaleString())}` : ''}${b.notes ? ` — Reason: ${h(b.notes)}` : ''}</div>` : ''}
     `;
     const cancelBtn = document.getElementById('cancelBillBtn');
-    cancelBtn.style.display = b.status === 'Cancelled' ? 'none' : '';
+    const todayStr = new Date().toISOString().slice(0, 10);
+    cancelBtn.style.display = (b.status === 'Cancelled' || b.date !== todayStr) ? 'none' : '';
     document.getElementById('billModal').classList.add('open');
   } catch { showToast('Could not load bill', true); }
 }
@@ -1999,7 +2001,8 @@ document.getElementById('closeCancelModalBtn').addEventListener('click', () => {
 
 document.getElementById('confirmCancelBtn').addEventListener('click', async () => {
   if (!currentBill) return;
-  const reason = document.getElementById('cancelReasonInput').value.trim() || 'No reason given';
+  const reason = document.getElementById('cancelReasonInput').value.trim();
+  if (!reason) { showToast('A cancellation reason is required', true); return; }
   const btn = document.getElementById('confirmCancelBtn');
   btn.disabled = true; btn.textContent = 'Cancelling…';
   try {

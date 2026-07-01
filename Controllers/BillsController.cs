@@ -101,6 +101,7 @@ namespace Nexiffy.Controllers
                 bill.Id = $"BILL-{seq:D8}";
                 bill.Date = DateTime.Now.ToString("yyyy-MM-dd");
                 bill.Status = BillStatus.Saved;
+                bill.CreatedBy = User.Identity?.Name;
 
                 // Batch-load all medicines in one query to avoid N+1 inside the SERIALIZABLE transaction
                 var itemCodes = bill.Items.Select(i => i.MedicineCode).Distinct().ToList();
@@ -153,26 +154,39 @@ namespace Nexiffy.Controllers
         [HttpPut("{id}/cancel")]
         public async Task<IActionResult> Cancel(string id, [FromBody] CancelRequest? req)
         {
+            if (string.IsNullOrWhiteSpace(req?.Reason))
+                return BadRequest(new { message = "A cancellation reason is required" });
+
             await using var transaction = await _context.Database
                 .BeginTransactionAsync(IsolationLevel.Serializable);
             try
             {
                 // Evaluate outside the expression tree — ?. is not allowed inside lambdas
-                var cancelNote = req?.Reason ?? "Cancelled";
+                var cancelNote = req.Reason;
+                var cancelledBy = User.Identity?.Name;
+                var today = DateTime.Now.ToString("yyyy-MM-dd");
 
                 // Atomic status flip — prevents double-cancel under concurrent requests
                 var updated = await _context.Bills
-                    .Where(b => b.Id == id && b.Status != BillStatus.Cancelled)
+                    .Where(b => b.Id == id && b.Status != BillStatus.Cancelled && b.Date == today)
                     .ExecuteUpdateAsync(s => s
                         .SetProperty(b => b.Status, BillStatus.Cancelled)
-                        .SetProperty(b => b.Notes, cancelNote));
+                        .SetProperty(b => b.Notes, cancelNote)
+                        .SetProperty(b => b.CancelledAt, DateTime.UtcNow)
+                        .SetProperty(b => b.CancelledBy, cancelledBy));
 
                 if (updated == 0)
                 {
-                    var exists = await _context.Bills.AnyAsync(b => b.Id == id);
-                    return exists
-                        ? BadRequest(new { message = "Bill already cancelled" })
-                        : NotFound(new { message = "Bill not found" });
+                    var existing = await _context.Bills
+                        .Where(b => b.Id == id)
+                        .Select(b => new { b.Status, b.Date })
+                        .FirstOrDefaultAsync();
+
+                    if (existing == null)
+                        return NotFound(new { message = "Bill not found" });
+                    if (existing.Status == BillStatus.Cancelled)
+                        return BadRequest(new { message = "Bill already cancelled" });
+                    return BadRequest(new { message = "Only bills from today can be cancelled" });
                 }
 
                 // Restore stock — IgnoreQueryFilters so soft-deleted medicines still get their stock back
@@ -203,7 +217,7 @@ namespace Nexiffy.Controllers
                 await transaction.CommitAsync();
 
                 _logger.LogInformation("Bill {BillId} cancelled by {User}. Reason: {Reason}",
-                    id, User.Identity?.Name, req?.Reason ?? "No reason given");
+                    id, cancelledBy, cancelNote);
 
                 return Ok(new { message = "Bill cancelled and stock restored", id });
             }

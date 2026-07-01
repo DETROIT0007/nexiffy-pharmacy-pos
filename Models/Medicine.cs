@@ -80,6 +80,14 @@ namespace Nexiffy.Models
         [MaxLength(500)]
         public string? Notes { get; set; }
 
+        [MaxLength(100)]
+        public string? CreatedBy { get; set; }
+
+        public DateTime? CancelledAt { get; set; }
+
+        [MaxLength(100)]
+        public string? CancelledBy { get; set; }
+
         public List<BillItem> Items { get; set; } = new();
     }
 
